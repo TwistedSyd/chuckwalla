@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10 Basic Drum Patterns</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #eee;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #fff;
+            font-size: 32px;
+            letter-spacing: 2px;
+        }
+
+        h2 {
+            text-align: center;
+            margin: 40px 0 20px 0;
+            color: #fff;
+            font-size: 24px;
+            letter-spacing: 1px;
+            padding: 15px;
+            background: #2a2a2a;
+            border-radius: 8px;
+        }
+
+        .pattern-container {
+            background: #252525;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .pattern-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .pattern-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .play-button {
+            background: #444;
+            color: #fff;
+            border: 1px solid #666;
+            padding: 8px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .play-button:hover {
+            background: #555;
+            border-color: #888;
+        }
+
+        .play-button.playing {
+            background: #2a9d2a;
+            border-color: #2a9d2a;
+        }
+
+        .midi-grid {
+            display: grid;
+            grid-template-columns: 100px repeat(16, 1fr);
+            gap: 2px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .instrument-label {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .kick { color: #ff6b6b; }
+        .snare { color: #4ecdc4; }
+        .clap { color: #ffe66d; }
+        .hihat { color: #95e1d3; }
+        .cymbal { color: #f38181; }
+        .tom { color: #ff9ff3; }
+        .rim { color: #feca57; }
+        .cowbell { color: #48dbfb; }
+        .shaker { color: #ff6348; }
+        .perc { color: #1dd1a1; }
+
+        .grid-cell {
+            aspect-ratio: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .grid-cell.active {
+            background: #00d9ff;
+            box-shadow: 0 0 10px rgba(0, 217, 255, 0.6);
+        }
+
+        .grid-cell.kick.active { background: #ff6b6b; box-shadow: 0 0 10px rgba(255, 107, 107, 0.6); }
+        .grid-cell.snare.active { background: #4ecdc4; box-shadow: 0 0 10px rgba(78, 205, 196, 0.6); }
+        .grid-cell.clap.active { background: #ffe66d; box-shadow: 0 0 10px rgba(255, 230, 109, 0.6); }
+        .grid-cell.hihat.active { background: #95e1d3; box-shadow: 0 0 10px rgba(149, 225, 211, 0.6); }
+        .grid-cell.cymbal.active { background: #f38181; box-shadow: 0 0 10px rgba(243, 129, 129, 0.6); }
+        .grid-cell.tom.active { background: #ff9ff3; box-shadow: 0 0 10px rgba(255, 159, 243, 0.6); }
+        .grid-cell.rim.active { background: #feca57; box-shadow: 0 0 10px rgba(254, 202, 87, 0.6); }
+        .grid-cell.cowbell.active { background: #48dbfb; box-shadow: 0 0 10px rgba(72, 219, 251, 0.6); }
+        .grid-cell.shaker.active { background: #ff6348; box-shadow: 0 0 10px rgba(255, 99, 72, 0.6); }
+        .grid-cell.perc.active { background: #1dd1a1; box-shadow: 0 0 10px rgba(29, 209, 161, 0.6); }
+
+        .grid-cell.playing {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .beat-marker {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #888;
+        }
+
+        .tempo-control {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        .tempo-control label {
+            margin-right: 10px;
+            color: #00d9ff;
+        }
+
+        .tempo-control input {
+            width: 200px;
+            margin: 0 10px;
+        }
+
+        .master-controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .master-controls button {
+            background: #00d9ff;
+            color: #1a1a2e;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 0 10px;
+            transition: all 0.3s;
+        }
+
+        .master-controls button:hover {
+            background: #00b8d4;
+            transform: scale(1.05);
+        }
+
+        .editor-section {
+            background: #2a2a2a;
+            border: 2px solid #444;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 40px;
+        }
+
+        .editor-section h2 {
+            margin: 0 0 20px 0;
+            padding: 0;
+            background: none;
+            text-align: left;
+        }
+
+        .editor-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .editor-controls input {
+            flex: 1;
+            padding: 10px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .editor-controls button {
+            background: #444;
+            color: #fff;
+            border: 1px solid #666;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .editor-controls button:hover {
+            background: #555;
+            border-color: #888;
+        }
+
+        #save-pattern {
+            background: #2a9d2a;
+            border-color: #2a9d2a;
+        }
+
+        #save-pattern:hover {
+            background: #239023;
+        }
+
+        #clear-editor {
+            background: #c53030;
+            border-color: #c53030;
+        }
+
+        #clear-editor:hover {
+            background: #9b2c2c;
+        }
+
+        .grid-cell.editable {
+            cursor: pointer;
+        }
+
+        .grid-cell.editable:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🥁 10 Basic Drum Patterns - MIDI Grid</h1>
+        
+        <div class="tempo-control">
+            <label for="tempo">Tempo (BPM):</label>
+            <input type="range" id="tempo" min="60" max="180" value="120">
+            <span id="tempo-value">120</span> BPM
+        </div>
+
+        <div class="master-controls">
+            <button id="stop-all">⏹ Stop All</button>
+        </div>
+
+        <div class="editor-section">
+            <h2>🎹 CREATE YOUR OWN BEAT</h2>
+            <div class="editor-controls">
+                <input type="text" id="pattern-name" placeholder="Enter beat name..." value="My Custom Beat">
+                <button id="clear-editor">Clear All</button>
+                <button id="save-pattern">Save Pattern</button>
+            </div>
+            <div id="editor-pattern"></div>
+        </div>
+
+        <div id="patterns"></div>
+    </div>
+
+    <script>
+        const patterns = [
+            {
+                name: "1. Basic Rock Beat",
+                kick: [0, 4, 8, 12],
+                snare: [4, 12],
+                clap: [],
+                hihat: [0, 2, 4, 6, 8, 10, 12, 14],
+                cymbal: []
+            },
+            {
+                name: "2. Four on the Floor",
+                kick: [0, 4, 8, 12],
+                snare: [4, 12],
+                clap: [],
+                hihat: [2, 6, 10, 14],
+                cymbal: [0]
+            },
+            {
+                name: "3. Hip Hop Basic",
+                kick: [0, 6, 10],
+                snare: [4, 12],
+                clap: [4, 12],
+                hihat: [0, 2, 4, 6, 8, 10, 12, 14],
+                cymbal: []
+            },
+            {
+                name: "4. Disco Beat",
+                kick: [0, 4, 8, 12],
+                snare: [],
+                clap: [4, 12],
+                hihat: [2, 6, 10, 14],
+                cymbal: [0, 8]
+            },
+            {
+                name: "5. Boom Bap",
+                kick: [0, 10],
+                snare: [4, 12],
+                clap: [4, 12],
+                hihat: [0, 2, 4, 6, 8, 10, 12, 14],
+                cymbal: []
+            },
+            {
+                name: "6. House Basic",
+                kick: [0, 4, 8, 12],
+                snare: [4, 12],
+                clap: [4, 12],
+                hihat: [0, 2, 4, 6, 8, 10, 12, 14],
+                cymbal: [0]
+            },
+            {
+                name: "7. Trap Pattern",
+                kick: [0, 3, 6, 10, 13],
+                snare: [4, 12],
+                clap: [],
+                hihat: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+                cymbal: []
+            },
+            {
+                name: "8. Reggae One Drop",
+                kick: [4, 12],
+                snare: [4, 12],
+                clap: [],
+                hihat: [2, 6, 10, 14],
+                cymbal: [0, 8]
+            },
+            {
+                name: "9. Motown Beat",
+                kick: [0, 8],
+                snare: [4, 12],
+                clap: [4, 12],
+                hihat: [0, 2, 4, 6, 8, 10, 12, 14],
+                cymbal: []
+            },
+            {
+                name: "10. Breakbeat",
+                kick: [0, 5, 10],
+                snare: [4, 13],
+                clap: [],
+                hihat: [0, 2, 4, 6, 8, 10, 12, 14],
+                cymbal: [0]
+            }
+        ];
+
+        const edmPatterns = [
+            {
+                name: "11. Classic House 4x4",
+                kick: [0, 4, 8, 12],
+                snare: [],
+                clap: [4, 12],
+                hihat: [0, 2, 4, 6, 8, 10, 12, 14],
+                cymbal: [0, 8],
+                shaker: [2, 6, 10, 14]
+            },
+            {
+                name: "12. Progressive House",
+                kick: [0, 4, 8, 12],
+                snare: [4, 12],
+                clap: [4, 12],
+                hihat: [2, 6, 10, 14],
+                cymbal: [0],
+                perc: [1, 3, 5, 7, 9, 11, 13, 15]
+            },
+            {
+                name: "13. Trance Driving",
+                kick: [0, 4, 8, 12],
+                snare: [4, 12],
+                clap: [],
+                hihat: [0, 2, 4, 6, 8, 10, 12, 14],
+                cymbal: [0, 8],
+                rim: [2, 6, 10, 14]
+            },
+            {
+                name: "14. Big Room EDM",
+                kick: [0, 4, 8, 12],
+                snare: [4, 12],
+                clap: [4, 12],
+                hihat: [2, 6, 10, 14],
+                cymbal: [0, 8],
+                tom: [3, 7, 11, 15]
+            },
+            {
+                name: "15. Dubstep Halftime",
+                kick: [0, 8],
+                snare: [4, 12],
+                clap: [4, 12],
+                hihat: [0, 2, 4, 6, 8, 10, 12, 14],
+                rim: [2, 6, 10, 14],
+                perc: [1, 5, 9, 13]
+            },
+            {
+                name: "16. Future Bass",
+                kick: [0, 6, 12],
+                snare: [4, 12],
+                clap: [4, 12],
+                hihat: [0, 3, 6, 9, 12, 15],
+                cymbal: [0, 8],
+                shaker: [0, 3, 6, 9, 12, 15]
+            },
+            {
+                name: "17. Tech House Groove",
+                kick: [0, 4, 8, 12],
+                snare: [],
+                clap: [4, 12],
+                hihat: [0, 2, 4, 6, 8, 10, 12, 14],
+                rim: [1, 3, 5, 7, 9, 11, 13, 15],
+                perc: [2, 6, 10, 14]
+            },
+            {
+                name: "18. Deep House",
+                kick: [0, 4, 8, 12],
+                snare: [],
+                clap: [4, 12],
+                hihat: [2, 6, 10, 14],
+                cymbal: [0],
+                shaker: [0, 2, 4, 6, 8, 10, 12, 14],
+                rim: [3, 11]
+            },
+            {
+                name: "19. Hardstyle Kick Roll",
+                kick: [0, 2, 4, 6, 8, 10, 12, 14],
+                snare: [4, 12],
+                clap: [4, 12],
+                hihat: [2, 6, 10, 14],
+                cymbal: [0, 8],
+                rim: [1, 5, 9, 13]
+            },
+            {
+                name: "20. Melodic Techno",
+                kick: [0, 4, 8, 12],
+                snare: [6, 14],
+                clap: [4, 12],
+                hihat: [0, 2, 4, 6, 8, 10, 12, 14],
+                rim: [1, 5, 9, 13],
+                perc: [3, 7, 11, 15],
+                shaker: [2, 10]
+            }
+        ];
+
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let currentlyPlaying = null;
+        let tempo = 120;
+        let userPatterns = [];
+        let currentEditorPattern = {
+            name: "My Custom Beat",
+            kick: [],
+            snare: [],
+            clap: [],
+            hihat: [],
+            cymbal: [],
+            tom: [],
+            rim: [],
+            shaker: [],
+            perc: []
+        };
+
+        function createKickDrum() {
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            const filter = audioContext.createBiquadFilter();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(150, audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(40, audioContext.currentTime + 0.1);
+            osc.frequency.exponentialRampToValueAtTime(20, audioContext.currentTime + 0.3);
+            
+            filter.type = 'lowpass';
+            filter.frequency.value = 200;
+            filter.Q.value = 1;
+            
+            gain.gain.setValueAtTime(1.2, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            osc.start(audioContext.currentTime);
+            osc.stop(audioContext.currentTime + 0.3);
+        }
+
+        function createSnare() {
+            // White noise for snare body
+            const noise = audioContext.createBufferSource();
+            const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.15, audioContext.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            
+            for (let i = 0; i < output.length; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+            
+            noise.buffer = noiseBuffer;
+            
+            const noiseFilter = audioContext.createBiquadFilter();
+            noiseFilter.type = 'highpass';
+            noiseFilter.frequency.value = 1000;
+            
+            const noiseGain = audioContext.createGain();
+            noiseGain.gain.setValueAtTime(0.8, audioContext.currentTime);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+            
+            // Tone component for body
+            const osc = audioContext.createOscillator();
+            const oscGain = audioContext.createGain();
+            
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(180, audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(150, audioContext.currentTime + 0.1);
+            
+            oscGain.gain.setValueAtTime(0.5, audioContext.currentTime);
+            oscGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(audioContext.destination);
+            
+            osc.connect(oscGain);
+            oscGain.connect(audioContext.destination);
+            
+            noise.start(audioContext.currentTime);
+            osc.start(audioContext.currentTime);
+            noise.stop(audioContext.currentTime + 0.15);
+            osc.stop(audioContext.currentTime + 0.1);
+        }
+
+        function createClap() {
+            // 808 clap uses multiple short bursts of filtered noise
+            for (let i = 0; i < 3; i++) {
+                const delay = i * 0.01;
+                const noise = audioContext.createBufferSource();
+                const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.05, audioContext.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                
+                for (let j = 0; j < output.length; j++) {
+                    output[j] = Math.random() * 2 - 1;
+                }
+                
+                noise.buffer = noiseBuffer;
+                
+                const filter = audioContext.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 1000;
+                filter.Q.value = 1;
+                
+                const gain = audioContext.createGain();
+                gain.gain.setValueAtTime(0.4, audioContext.currentTime + delay);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + delay + 0.05);
+                
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioContext.destination);
+                
+                noise.start(audioContext.currentTime + delay);
+                noise.stop(audioContext.currentTime + delay + 0.05);
+            }
+        }
+
+        function createHiHat() {
+            // 808 hi-hat uses 6 square wave oscillators
+            const freqs = [296, 285, 365, 445, 540, 630];
+            const gain = audioContext.createGain();
+            
+            freqs.forEach(freq => {
+                const osc = audioContext.createOscillator();
+                osc.type = 'square';
+                osc.frequency.value = freq;
+                osc.connect(gain);
+                osc.start(audioContext.currentTime);
+                osc.stop(audioContext.currentTime + 0.04);
+            });
+            
+            const filter = audioContext.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.value = 7000;
+            
+            gain.gain.setValueAtTime(0.15, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.04);
+            
+            gain.connect(filter);
+            filter.connect(audioContext.destination);
+        }
+
+        function createCymbal() {
+            // 808 open hi-hat/cymbal - similar to closed but longer decay
+            const freqs = [296, 285, 365, 445, 540, 630];
+            const gain = audioContext.createGain();
+            
+            freqs.forEach(freq => {
+                const osc = audioContext.createOscillator();
+                osc.type = 'square';
+                osc.frequency.value = freq;
+                osc.connect(gain);
+                osc.start(audioContext.currentTime);
+                osc.stop(audioContext.currentTime + 0.5);
+            });
+            
+            const filter = audioContext.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.value = 7000;
+            
+            gain.gain.setValueAtTime(0.15, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            gain.connect(filter);
+            filter.connect(audioContext.destination);
+        }
+
+        function createTom() {
+            // 808 tom - pitched oscillator with decay
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(130, audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(80, audioContext.currentTime + 0.2);
+            
+            gain.gain.setValueAtTime(0.8, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            osc.start(audioContext.currentTime);
+            osc.stop(audioContext.currentTime + 0.2);
+        }
+
+        function createRimshot() {
+            // 808 rimshot - short, high-pitched click
+            const osc1 = audioContext.createOscillator();
+            const osc2 = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            
+            osc1.type = 'square';
+            osc2.type = 'square';
+            osc1.frequency.value = 1000;
+            osc2.frequency.value = 1200;
+            
+            gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.02);
+            
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            osc1.start(audioContext.currentTime);
+            osc2.start(audioContext.currentTime);
+            osc1.stop(audioContext.currentTime + 0.02);
+            osc2.stop(audioContext.currentTime + 0.02);
+        }
+
+        function createCowbell() {
+            // 808 cowbell - two square waves
+            const osc1 = audioContext.createOscillator();
+            const osc2 = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            const filter = audioContext.createBiquadFilter();
+            
+            osc1.type = 'square';
+            osc2.type = 'square';
+            osc1.frequency.value = 540;
+            osc2.frequency.value = 800;
+            
+            filter.type = 'bandpass';
+            filter.frequency.value = 650;
+            filter.Q.value = 5;
+            
+            gain.gain.setValueAtTime(0.5, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            osc1.connect(filter);
+            osc2.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            osc1.start(audioContext.currentTime);
+            osc2.start(audioContext.currentTime);
+            osc1.stop(audioContext.currentTime + 0.3);
+            osc2.stop(audioContext.currentTime + 0.3);
+        }
+
+        function createShaker() {
+            // Shaker - short burst of filtered noise
+            const noise = audioContext.createBufferSource();
+            const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.08, audioContext.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            
+            for (let i = 0; i < output.length; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+            
+            noise.buffer = noiseBuffer;
+            
+            const filter = audioContext.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.value = 4000;
+            
+            const gain = audioContext.createGain();
+            gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
+            
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            noise.start(audioContext.currentTime);
+            noise.stop(audioContext.currentTime + 0.08);
+        }
+
+        function createPerc() {
+            // Generic percussion - pitched click
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(400, audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.05);
+            
+            gain.gain.setValueAtTime(0.4, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
+            
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            osc.start(audioContext.currentTime);
+            osc.stop(audioContext.currentTime + 0.05);
+        }
+
+        function playSound(instrument) {
+            switch(instrument) {
+                case 'kick': createKickDrum(); break;
+                case 'snare': createSnare(); break;
+                case 'clap': createClap(); break;
+                case 'hihat': createHiHat(); break;
+                case 'cymbal': createCymbal(); break;
+                case 'tom': createTom(); break;
+                case 'rim': createRimshot(); break;
+                case 'cowbell': createCowbell(); break;
+                case 'shaker': createShaker(); break;
+                case 'perc': createPerc(); break;
+            }
+        }
+
+        function createPatternElement(pattern, index) {
+            const container = document.createElement('div');
+            container.className = 'pattern-container';
+            
+            const header = document.createElement('div');
+            header.className = 'pattern-header';
+            
+            const title = document.createElement('div');
+            title.className = 'pattern-title';
+            title.textContent = pattern.name;
+            
+            const playButton = document.createElement('button');
+            playButton.className = 'play-button';
+            playButton.textContent = '▶ Play';
+            playButton.dataset.patternId = index;
+            
+            header.appendChild(title);
+            header.appendChild(playButton);
+            
+            const grid = document.createElement('div');
+            grid.className = 'midi-grid';
+            
+            // Determine which instruments this pattern uses
+            const availableInstruments = Object.keys(pattern).filter(key => key !== 'name');
+            
+            availableInstruments.forEach(inst => {
+                const label = document.createElement('div');
+                label.className = `instrument-label ${inst}`;
+                label.textContent = inst.toUpperCase();
+                grid.appendChild(label);
+                
+                for (let i = 0; i < 16; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = `grid-cell ${inst}`;
+                    cell.dataset.step = i;
+                    cell.dataset.instrument = inst;
+                    
+                    if (i === 0 || i === 4 || i === 8 || i === 12) {
+                        const marker = document.createElement('div');
+                        marker.className = 'beat-marker';
+                        marker.textContent = (i / 4) + 1;
+                        cell.appendChild(marker);
+                    }
+                    
+                    if (pattern[inst].includes(i)) {
+                        cell.classList.add('active');
+                    }
+                    
+                    grid.appendChild(cell);
+                }
+            });
+            
+            container.appendChild(header);
+            container.appendChild(grid);
+            
+            return container;
+        }
+
+        function createEditablePattern() {
+            const container = document.createElement('div');
+            container.className = 'pattern-container';
+            
+            const header = document.createElement('div');
+            header.className = 'pattern-header';
+            
+            const title = document.createElement('div');
+            title.className = 'pattern-title';
+            title.textContent = 'Click cells to add/remove notes';
+            
+            const playButton = document.createElement('button');
+            playButton.className = 'play-button';
+            playButton.textContent = '▶ Play';
+            playButton.id = 'play-editor';
+            
+            // Add click handler directly to the button
+            playButton.addEventListener('click', function() {
+                if (this.classList.contains('playing')) {
+                    stopPattern();
+                    this.textContent = '▶ Play';
+                    this.classList.remove('playing');
+                } else {
+                    stopPattern(); // Stop any other playing pattern
+                    
+                    const cells = document.getElementById('editor-grid').querySelectorAll('.grid-cell');
+                    let currentStep = 0;
+                    const stepTime = (60 / tempo) * 1000 / 4;
+                    
+                    this.textContent = '⏹ Stop';
+                    this.classList.add('playing');
+                    
+                    function step() {
+                        cells.forEach(cell => cell.classList.remove('playing'));
+                        
+                        const stepCells = Array.from(cells).filter(cell => 
+                            parseInt(cell.dataset.step) === currentStep
+                        );
+                        
+                        stepCells.forEach(cell => {
+                            cell.classList.add('playing');
+                            if (cell.classList.contains('active')) {
+                                playSound(cell.dataset.instrument);
+                            }
+                        });
+                        
+                        currentStep = (currentStep + 1) % 16;
+                    }
+                    
+                    step();
+                    currentlyPlaying = setInterval(step, stepTime);
+                }
+            });
+            
+            header.appendChild(title);
+            header.appendChild(playButton);
+            
+            const grid = document.createElement('div');
+            grid.className = 'midi-grid';
+            grid.id = 'editor-grid';
+            
+            const instruments = ['kick', 'snare', 'clap', 'hihat', 'cymbal', 'tom', 'rim', 'shaker', 'perc'];
+            
+            instruments.forEach(inst => {
+                const label = document.createElement('div');
+                label.className = `instrument-label ${inst}`;
+                label.textContent = inst.toUpperCase();
+                grid.appendChild(label);
+                
+                for (let i = 0; i < 16; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = `grid-cell ${inst} editable`;
+                    cell.dataset.step = i;
+                    cell.dataset.instrument = inst;
+                    
+                    if (i === 0 || i === 4 || i === 8 || i === 12) {
+                        const marker = document.createElement('div');
+                        marker.className = 'beat-marker';
+                        marker.textContent = (i / 4) + 1;
+                        cell.appendChild(marker);
+                    }
+                    
+                    // Add click handler for editing
+                    cell.addEventListener('click', function() {
+                        const step = parseInt(this.dataset.step);
+                        const instrument = this.dataset.instrument;
+                        
+                        if (this.classList.contains('active')) {
+                            this.classList.remove('active');
+                            const index = currentEditorPattern[instrument].indexOf(step);
+                            if (index > -1) {
+                                currentEditorPattern[instrument].splice(index, 1);
+                            }
+                        } else {
+                            this.classList.add('active');
+                            currentEditorPattern[instrument].push(step);
+                            currentEditorPattern[instrument].sort((a, b) => a - b);
+                            playSound(instrument);
+                        }
+                    });
+                    
+                    grid.appendChild(cell);
+                }
+            });
+            
+            container.appendChild(header);
+            container.appendChild(grid);
+            
+            return container;
+        }
+
+        function playPattern(patternIndex, button) {
+            if (currentlyPlaying !== null) {
+                stopPattern();
+            }
+            
+            // Combine all pattern arrays
+            const allPatterns = [...userPatterns, ...patterns, ...edmPatterns];
+            const pattern = allPatterns[patternIndex];
+            const cells = button.parentElement.parentElement.querySelectorAll('.grid-cell');
+            let currentStep = 0;
+            const stepTime = (60 / tempo) * 1000 / 4;
+            
+            button.textContent = '⏹ Stop';
+            button.classList.add('playing');
+            
+            function step() {
+                cells.forEach(cell => cell.classList.remove('playing'));
+                
+                const stepCells = Array.from(cells).filter(cell => 
+                    parseInt(cell.dataset.step) === currentStep
+                );
+                
+                stepCells.forEach(cell => {
+                    cell.classList.add('playing');
+                    if (cell.classList.contains('active')) {
+                        playSound(cell.dataset.instrument);
+                    }
+                });
+                
+                currentStep = (currentStep + 1) % 16;
+            }
+            
+            step();
+            currentlyPlaying = setInterval(step, stepTime);
+            
+            button.dataset.intervalId = currentlyPlaying;
+        }
+
+        function stopPattern() {
+            if (currentlyPlaying !== null) {
+                clearInterval(currentlyPlaying);
+                currentlyPlaying = null;
+                
+                document.querySelectorAll('.play-button').forEach(btn => {
+                    btn.textContent = '▶ Play';
+                    btn.classList.remove('playing');
+                });
+                
+                document.querySelectorAll('.grid-cell').forEach(cell => {
+                    cell.classList.remove('playing');
+                });
+            }
+        }
+
+        function renderAllPatterns() {
+            const patternsContainer = document.getElementById('patterns');
+            patternsContainer.innerHTML = '';
+            
+            // Add user patterns section if any exist
+            if (userPatterns.length > 0) {
+                const userHeader = document.createElement('h2');
+                userHeader.textContent = '⭐ YOUR CUSTOM BEATS';
+                patternsContainer.appendChild(userHeader);
+                
+                userPatterns.forEach((pattern, index) => {
+                    const patternEl = createPatternElement(pattern, index);
+                    
+                    // Add delete button to custom beats
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'play-button';
+                    deleteBtn.textContent = '🗑 Delete';
+                    deleteBtn.style.background = '#c53030';
+                    deleteBtn.style.borderColor = '#c53030';
+                    deleteBtn.style.marginLeft = '10px';
+                    
+                    deleteBtn.addEventListener('click', function() {
+                        if (confirm(`Delete "${pattern.name}"?`)) {
+                            userPatterns.splice(index, 1);
+                            renderAllPatterns();
+                        }
+                    });
+                    
+                    patternEl.querySelector('.pattern-header').appendChild(deleteBtn);
+                    patternsContainer.appendChild(patternEl);
+                });
+            }
+            
+            // Add basic patterns section
+            const basicHeader = document.createElement('h2');
+            basicHeader.textContent = '🥁 BASIC PATTERNS';
+            patternsContainer.appendChild(basicHeader);
+            
+            patterns.forEach((pattern, index) => {
+                patternsContainer.appendChild(createPatternElement(pattern, userPatterns.length + index));
+            });
+
+            // Add EDM patterns section
+            const edmHeader = document.createElement('h2');
+            edmHeader.textContent = '🎧 EDM BEATS';
+            patternsContainer.appendChild(edmHeader);
+            
+            edmPatterns.forEach((pattern, index) => {
+                patternsContainer.appendChild(createPatternElement(pattern, userPatterns.length + patterns.length + index));
+            });
+
+            // Re-attach event listeners
+            document.querySelectorAll('.play-button:not([onclick])').forEach(button => {
+                if (!button.textContent.includes('Delete') && button.dataset.patternId) {
+                    button.addEventListener('click', function() {
+                        const patternId = parseInt(this.dataset.patternId);
+                        if (this.classList.contains('playing')) {
+                            stopPattern();
+                        } else {
+                            playPattern(patternId, this);
+                        }
+                    });
+                }
+            });
+        }
+
+        // Initialize editor
+        const editorContainer = document.getElementById('editor-pattern');
+        editorContainer.appendChild(createEditablePattern());
+
+        // Render all patterns initially
+        renderAllPatterns();
+
+        document.getElementById('stop-all').addEventListener('click', stopPattern);
+
+        // Clear editor button
+        document.getElementById('clear-editor').addEventListener('click', function() {
+            if (confirm('Clear all notes from the editor?')) {
+                const cells = document.getElementById('editor-grid').querySelectorAll('.grid-cell');
+                cells.forEach(cell => cell.classList.remove('active'));
+                
+                // Reset current editor pattern
+                Object.keys(currentEditorPattern).forEach(key => {
+                    if (key !== 'name') {
+                        currentEditorPattern[key] = [];
+                    }
+                });
+            }
+        });
+
+        // Save pattern button
+        document.getElementById('save-pattern').addEventListener('click', function() {
+            const patternName = document.getElementById('pattern-name').value.trim() || 'My Custom Beat';
+            
+            // Check if pattern is empty
+            const hasNotes = Object.keys(currentEditorPattern).some(key => 
+                key !== 'name' && currentEditorPattern[key].length > 0
+            );
+            
+            if (!hasNotes) {
+                alert('Please add some notes to your beat first!');
+                return;
+            }
+            
+            // Create a copy of the pattern
+            const newPattern = {
+                name: `${userPatterns.length + 1}. ${patternName}`,
+                ...JSON.parse(JSON.stringify(currentEditorPattern))
+            };
+            delete newPattern.name;
+            newPattern.name = `${userPatterns.length + 1}. ${patternName}`;
+            
+            userPatterns.push(newPattern);
+            
+            // Re-render all patterns
+            renderAllPatterns();
+            
+            alert(`Beat "${patternName}" saved!`);
+        });
+
+        const tempoSlider = document.getElementById('tempo');
+        const tempoValue = document.getElementById('tempo-value');
+        
+        tempoSlider.addEventListener('input', function() {
+            tempo = parseInt(this.value);
+            tempoValue.textContent = tempo;
+            
+            if (currentlyPlaying !== null) {
+                const currentButton = document.querySelector('.play-button.playing');
+                const patternId = parseInt(currentButton.dataset.patternId);
+                stopPattern();
+                playPattern(patternId, currentButton);
+            }
+        });
+    </script>
+</body>
+</html>
