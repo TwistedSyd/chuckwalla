@@ -1,359 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Drum Patterns</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Courier New', monospace;
-            background: #2d2d2d;
-            color: #f5f5f5;
-            padding: 20px;
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 30px;
-            color: #fff;
-            font-size: 32px;
-            letter-spacing: 2px;
-        }
-
-        h2 {
-            text-align: center;
-            margin: 40px 0 20px 0;
-            color: #fff;
-            font-size: 24px;
-            letter-spacing: 1px;
-            padding: 15px;
-            background: #3a3a3a;
-            border-radius: 8px;
-        }
-
-        .pattern-container {
-            background: #3a3a3a;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 25px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        .pattern-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .pattern-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: #fff;
-        }
-
-        .play-button {
-            background: #555;
-            color: #fff;
-            border: 1px solid #777;
-            padding: 8px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            transition: all 0.2s;
-        }
-
-        .play-button:hover {
-            background: #666;
-            border-color: #999;
-        }
-
-        .play-button.playing {
-            background: #2a9d2a;
-            border-color: #2a9d2a;
-        }
-
-        .midi-grid {
-            display: grid;
-            grid-template-columns: 100px repeat(16, 1fr);
-            gap: 2px;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 10px;
-            border-radius: 5px;
-        }
-
-        .instrument-label {
-            display: flex;
-            align-items: center;
-            padding: 8px;
-            font-size: 12px;
-            font-weight: bold;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-        }
-
-        .kick { color: #ff6b6b; }
-        .snare { color: #4ecdc4; }
-        .clap { color: #ffe66d; }
-        .hihat { color: #95e1d3; }
-        .cymbal { color: #f38181; }
-        .tom { color: #ff9ff3; }
-        .rim { color: #feca57; }
-        .cowbell { color: #48dbfb; }
-        .shaker { color: #ff6348; }
-        .perc { color: #1dd1a1; }
-
-        .grid-cell {
-            aspect-ratio: 1;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 3px;
-            cursor: pointer;
-            transition: all 0.2s;
-            position: relative;
-        }
-
-        .grid-cell.active {
-            background: #8b5cf6;
-            box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
-        }
-
-        .grid-cell.kick.active { background: #ec4899; box-shadow: 0 0 10px rgba(236, 72, 153, 0.6); }
-        .grid-cell.snare.active { background: #06b6d4; box-shadow: 0 0 10px rgba(6, 182, 212, 0.6); }
-        .grid-cell.clap.active { background: #eab308; box-shadow: 0 0 10px rgba(234, 179, 8, 0.6); }
-        .grid-cell.hihat.active { background: #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.6); }
-        .grid-cell.cymbal.active { background: #f43f5e; box-shadow: 0 0 10px rgba(244, 63, 94, 0.6); }
-        .grid-cell.tom.active { background: #a855f7; box-shadow: 0 0 10px rgba(168, 85, 247, 0.6); }
-        .grid-cell.rim.active { background: #f59e0b; box-shadow: 0 0 10px rgba(245, 158, 11, 0.6); }
-        .grid-cell.cowbell.active { background: #0ea5e9; box-shadow: 0 0 10px rgba(14, 165, 233, 0.6); }
-        .grid-cell.shaker.active { background: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.6); }
-        .grid-cell.perc.active { background: #14b8a6; box-shadow: 0 0 10px rgba(20, 184, 166, 0.6); }
-
-        .grid-cell.playing {
-            background: rgba(139, 92, 246, 0.4);
-            box-shadow: 0 0 15px rgba(139, 92, 246, 0.8);
-        }
-
-        .beat-marker {
-            position: absolute;
-            top: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 10px;
-            color: #888;
-        }
-
-        .tempo-control {
-            text-align: center;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-        }
-
-        .tempo-control label {
-            margin-right: 10px;
-            color: #00d9ff;
-        }
-
-        .tempo-control input {
-            width: 200px;
-            margin: 0 10px;
-        }
-
-        .master-controls {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .master-controls button {
-            background: #00d9ff;
-            color: #1a1a2e;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            font-size: 16px;
-            margin: 0 10px;
-            transition: all 0.3s;
-        }
-
-        .master-controls button:hover {
-            background: #00b8d4;
-            transform: scale(1.05);
-        }
-
-        .editor-section {
-            background: #3a3a3a;
-            border: 2px solid #555;
-            border-radius: 8px;
-            padding: 25px;
-            margin-bottom: 40px;
-        }
-
-        .editor-section h2 {
-            margin: 0 0 20px 0;
-            padding: 0;
-            background: none;
-            text-align: left;
-        }
-
-        .editor-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            align-items: center;
-        }
-
-        .editor-controls input {
-            flex: 1;
-            padding: 10px;
-            background: #2d2d2d;
-            border: 1px solid #555;
-            border-radius: 4px;
-            color: #fff;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-        }
-
-        .editor-controls button {
-            background: #555;
-            color: #fff;
-            border: 1px solid #777;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            transition: all 0.2s;
-        }
-
-        .editor-controls button:hover {
-            background: #666;
-            border-color: #999;
-        }
-
-        #save-pattern {
-            background: #2a9d2a;
-            border-color: #2a9d2a;
-        }
-
-        #save-pattern:hover {
-            background: #239023;
-        }
-
-        #clear-editor {
-            background: #c53030;
-            border-color: #c53030;
-        }
-
-        #clear-editor:hover {
-            background: #9b2c2c;
-        }
-
-        .grid-cell.editable {
-            cursor: pointer;
-        }
-
-        .grid-cell.editable:hover {
-            background: rgba(255, 255, 255, 0.15);
-        }
-
-        /* Navigation Icons */
-        .nav-icons {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 1000;
-            display: flex;
-            gap: 10px;
-        }
-
-        .nav-icon-button {
-            width: 50px;
-            height: 50px;
-            background: #3a3a3a;
-            border: 2px solid #555;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-
-        .nav-icon-button:hover {
-            background: #444;
-            border-color: #666;
-            transform: translateY(-2px);
-        }
-
-        .nav-icon-button.active {
-            background: #ff6b6b;
-            border-color: #ff6b6b;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(255, 107, 107, 0.4);
-        }
-    </style>
-</head>
-<body>
-    <!-- Navigation Icons -->
-    <div class="nav-icons">
-        <a href="index.html" class="nav-icon-button" title="Home">🏠</a>
-        <a href="drums.html" class="nav-icon-button active" title="Drum Machine">🥁</a>
-        <a href="piano.html" class="nav-icon-button" title="Piano">🎹</a>
-        <a href="guitar.html" class="nav-icon-button" title="Guitar">🎸</a>
-        <a href="circle-of-fifths.html" class="nav-icon-button" title="Circle of Fifths">🌀</a>
-    </div>
-
-    <div class="container">
-        <h1>🥁 Drum Patterns - MIDI Grid</h1>
-
-        <div class="tempo-control">
-            <label for="tempo">Tempo (BPM):</label>
-            <input type="range" id="tempo" min="60" max="180" value="120">
-            <span id="tempo-value">120</span> BPM
-        </div>
-
-        <div class="master-controls">
-            <button id="stop-all">⏹ Stop All</button>
-        </div>
-
-        <div class="editor-section">
-            <h2>🎹 CREATE YOUR OWN BEAT</h2>
-            <div class="editor-controls">
-                <input type="text" id="pattern-name" placeholder="Enter beat name..." value="My Custom Beat">
-                <button id="clear-editor">Clear All</button>
-                <button id="save-pattern">Save Pattern</button>
-            </div>
-            <div id="editor-pattern"></div>
-        </div>
-
-        <div id="patterns"></div>
-    </div>
-
-    <script>
         const patterns = [
             {
                 name: "1. Basic Rock Beat",
@@ -1058,18 +702,31 @@
             }
         }
 
+        let searchQuery = '';
+
         function renderAllPatterns() {
             const patternsContainer = document.getElementById('patterns');
             patternsContainer.innerHTML = '';
 
+            // Filter patterns based on search query
+            const filterPattern = (pattern) => {
+                if (!searchQuery) return true;
+                return pattern.name.toLowerCase().includes(searchQuery.toLowerCase());
+            };
+
+            const filteredUserPatterns = userPatterns.filter(filterPattern);
+            const filteredPatterns = patterns.filter(filterPattern);
+            const filteredEdmPatterns = edmPatterns.filter(filterPattern);
+
             // Add user patterns section if any exist
-            if (userPatterns.length > 0) {
+            if (filteredUserPatterns.length > 0) {
                 const userHeader = document.createElement('h2');
                 userHeader.textContent = '⭐ YOUR CUSTOM BEATS';
                 patternsContainer.appendChild(userHeader);
 
-                userPatterns.forEach((pattern, index) => {
-                    const patternEl = createPatternElement(pattern, index);
+                filteredUserPatterns.forEach((pattern, index) => {
+                    const originalIndex = userPatterns.indexOf(pattern);
+                    const patternEl = createPatternElement(pattern, originalIndex);
 
                     // Add delete button to custom beats
                     const deleteBtn = document.createElement('button');
@@ -1081,7 +738,7 @@
 
                     deleteBtn.addEventListener('click', function() {
                         if (confirm(`Delete "${pattern.name}"?`)) {
-                            userPatterns.splice(index, 1);
+                            userPatterns.splice(originalIndex, 1);
                             renderAllPatterns();
                         }
                     });
@@ -1092,22 +749,35 @@
             }
 
             // Add basic patterns section
-            const basicHeader = document.createElement('h2');
-            basicHeader.textContent = '🥁 BASIC PATTERNS';
-            patternsContainer.appendChild(basicHeader);
-
-            patterns.forEach((pattern, index) => {
-                patternsContainer.appendChild(createPatternElement(pattern, userPatterns.length + index));
-            });
+            if (filteredPatterns.length > 0) {
+                filteredPatterns.forEach((pattern) => {
+                    const originalIndex = userPatterns.length + patterns.indexOf(pattern);
+                    patternsContainer.appendChild(createPatternElement(pattern, originalIndex));
+                });
+            }
 
             // Add EDM patterns section
-            const edmHeader = document.createElement('h2');
-            edmHeader.textContent = '🎧 EDM BEATS';
-            patternsContainer.appendChild(edmHeader);
+            if (filteredEdmPatterns.length > 0) {
+                const edmHeader = document.createElement('h2');
+                edmHeader.textContent = '🎧 EDM BEATS';
+                patternsContainer.appendChild(edmHeader);
 
-            edmPatterns.forEach((pattern, index) => {
-                patternsContainer.appendChild(createPatternElement(pattern, userPatterns.length + patterns.length + index));
-            });
+                filteredEdmPatterns.forEach((pattern) => {
+                    const originalIndex = userPatterns.length + patterns.length + edmPatterns.indexOf(pattern);
+                    patternsContainer.appendChild(createPatternElement(pattern, originalIndex));
+                });
+            }
+
+            // Show "no results" message if no patterns match
+            if (filteredUserPatterns.length === 0 && filteredPatterns.length === 0 && filteredEdmPatterns.length === 0) {
+                const noResults = document.createElement('div');
+                noResults.style.textAlign = 'center';
+                noResults.style.padding = '40px';
+                noResults.style.color = '#888';
+                noResults.style.fontSize = '16px';
+                noResults.innerHTML = `No beats found matching "<strong>${searchQuery}</strong>"`;
+                patternsContainer.appendChild(noResults);
+            }
 
             // Re-attach event listeners
             document.querySelectorAll('.play-button:not([onclick])').forEach(button => {
@@ -1178,12 +848,17 @@
             alert(`Beat "${patternName}" saved!`);
         });
 
-        const tempoSlider = document.getElementById('tempo');
-        const tempoValue = document.getElementById('tempo-value');
+        const tempoInput = document.getElementById('tempo-input');
+        const tempoUpBtn = document.getElementById('tempo-up');
+        const tempoDownBtn = document.getElementById('tempo-down');
+        const tapTempoBtn = document.getElementById('tap-tempo');
 
-        tempoSlider.addEventListener('input', function() {
-            tempo = parseInt(this.value);
-            tempoValue.textContent = tempo;
+        let tapTimes = [];
+
+        function updateTempo(newTempo) {
+            newTempo = Math.max(60, Math.min(240, newTempo));
+            tempo = newTempo;
+            tempoInput.value = tempo;
 
             if (currentlyPlaying !== null) {
                 const currentButton = document.querySelector('.play-button.playing');
@@ -1191,8 +866,87 @@
                 stopPattern();
                 playPattern(patternId, currentButton);
             }
+        }
+
+        tempoInput.addEventListener('input', function() {
+            const newTempo = parseInt(this.value);
+            if (!isNaN(newTempo)) {
+                updateTempo(newTempo);
+            }
         });
 
-    </script>
-</body>
-</html>
+        tempoUpBtn.addEventListener('click', function() {
+            updateTempo(tempo + 1);
+        });
+
+        tempoDownBtn.addEventListener('click', function() {
+            updateTempo(tempo - 1);
+        });
+
+        tapTempoBtn.addEventListener('click', function() {
+            const now = Date.now();
+            tapTimes.push(now);
+
+            // Keep only last 4 taps
+            if (tapTimes.length > 4) {
+                tapTimes.shift();
+            }
+
+            // Need at least 2 taps to calculate tempo
+            if (tapTimes.length >= 2) {
+                const intervals = [];
+                for (let i = 1; i < tapTimes.length; i++) {
+                    intervals.push(tapTimes[i] - tapTimes[i - 1]);
+                }
+
+                const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+                const bpm = Math.round(60000 / avgInterval);
+                updateTempo(bpm);
+            }
+
+            // Reset if last tap was more than 3 seconds ago
+            setTimeout(() => {
+                if (tapTimes.length > 0 && Date.now() - tapTimes[tapTimes.length - 1] > 3000) {
+                    tapTimes = [];
+                }
+            }, 3000);
+        });
+
+        // Search functionality
+        const searchInput = document.getElementById('search-input');
+        searchInput.addEventListener('input', function() {
+            searchQuery = this.value;
+            renderAllPatterns();
+        });
+
+        // Toggle create beat section
+        const createBeatBtn = document.getElementById('create-beat-btn');
+        const editorSection = document.getElementById('editor-section');
+
+        createBeatBtn.addEventListener('click', function() {
+            editorSection.classList.toggle('visible');
+            if (editorSection.classList.contains('visible')) {
+                createBeatBtn.textContent = '✓ Close Editor';
+                createBeatBtn.classList.add('active');
+                editorSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                createBeatBtn.textContent = '✏️ Create Your Own Beat';
+                createBeatBtn.classList.remove('active');
+            }
+        });
+
+        // Switch between tabs
+        function switchTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Show/hide appropriate content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tab}-tab`).classList.add('active');
+        }
+

@@ -4,216 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chuckwalla</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Courier New', monospace;
-            background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
-            color: #f5f5f5;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 900px;
-            width: 100%;
-            text-align: center;
-        }
-
-        h1 {
-            font-size: clamp(32px, 6vw, 48px);
-            margin-bottom: 20px;
-            color: #fff;
-            letter-spacing: 3px;
-            text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
-        }
-
-        .subtitle {
-            font-size: clamp(14px, 3vw, 18px);
-            color: #aaa;
-            margin-bottom: 60px;
-            letter-spacing: 1px;
-        }
-
-        @media (max-width: 768px) {
-            h1 {
-                letter-spacing: 2px;
-            }
-
-            .subtitle {
-                margin-bottom: 40px;
-            }
-        }
-
-        .instruments-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 30px;
-            margin-bottom: 40px;
-        }
-
-        @media (max-width: 768px) {
-            .instruments-grid {
-                grid-template-columns: 1fr;
-                max-width: 400px;
-                margin: 0 auto 40px;
-            }
-
-            .instrument-card {
-                padding: 30px 20px;
-            }
-        }
-
-        .instrument-card {
-            background: #3a3a3a;
-            border-radius: 12px;
-            padding: 40px 30px;
-            transition: all 0.3s;
-            cursor: pointer;
-            text-decoration: none;
-            color: inherit;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            border: 2px solid transparent;
-        }
-
-        .instrument-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7);
-        }
-
-        .instrument-card.drums:hover {
-            border-color: #ff6b6b;
-            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
-        }
-
-        .instrument-card.piano:hover {
-            border-color: #00d9ff;
-            box-shadow: 0 8px 25px rgba(0, 217, 255, 0.4);
-        }
-
-        .instrument-card.guitar:hover {
-            border-color: #10b981;
-            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
-        }
-
-        .instrument-icon {
-            font-size: clamp(48px, 8vw, 72px);
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            line-height: 1;
-        }
-
-        .instrument-name {
-            font-size: clamp(22px, 4vw, 28px);
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #fff;
-            text-align: center;
-        }
-
-        .instrument-description {
-            font-size: clamp(13px, 2vw, 14px);
-            color: #aaa;
-            line-height: 1.6;
-            text-align: center;
-            max-width: 100%;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            margin-top: 15px;
-            font-weight: bold;
-            letter-spacing: 0.5px;
-        }
-
-        .status-badge.active {
-            background: #2a9d2a;
-            color: #fff;
-        }
-
-        .status-badge.coming-soon {
-            background: #555;
-            color: #bbb;
-        }
-
-        .footer {
-            margin-top: 60px;
-            font-size: 14px;
-            color: #666;
-        }
-
-        /* Navigation Icons */
-        .nav-icons {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 1000;
-            display: flex;
-            gap: 10px;
-        }
-
-        .nav-icon-button {
-            width: 50px;
-            height: 50px;
-            background: #3a3a3a;
-            border: 2px solid #555;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-
-        .nav-icon-button:hover {
-            background: #444;
-            border-color: #666;
-            transform: translateY(-2px);
-        }
-
-        .nav-icon-button.active {
-            background: #00d9ff;
-            border-color: #00d9ff;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 217, 255, 0.4);
-        }
-    </style>
+    <link rel="stylesheet" href="css/index.css">
 </head>
 <body>
     <!-- Navigation Icons -->
     <div class="nav-icons">
         <a href="index.html" class="nav-icon-button active" title="Home">🏠</a>
-        <a href="drums.html" class="nav-icon-button" title="Drum Machine">🥁</a>
-        <a href="piano.html" class="nav-icon-button" title="Piano">🎹</a>
-        <a href="guitar.html" class="nav-icon-button" title="Guitar">🎸</a>
-        <a href="circle-of-fifths.html" class="nav-icon-button" title="Circle of Fifths">🌀</a>
+        <a href="html/drums.html" class="nav-icon-button" title="Drum Machine">🥁</a>
+        <a href="html/piano.html" class="nav-icon-button" title="Piano">🎹</a>
+        <a href="html/guitar.html" class="nav-icon-button" title="Guitar">🎸</a>
+        <a href="html/circle-of-fifths.html" class="nav-icon-button" title="Circle of Fifths">🌀</a>
     </div>
 
     <div class="container">
-        <h1>🎵 Chuckwalla</h1>
+        <h1>
+            <span class="chuckwalla-graphic">🦎</span>
+            Chuckwalla
+        </h1>
         <p class="subtitle">Create amazing beats and melodies in your browser</p>
 
         <div class="instruments-grid">
-            <a href="drums.html" class="instrument-card drums">
+            <a href="html/drums.html" class="instrument-card drums">
                 <div class="instrument-icon">🥁</div>
                 <div class="instrument-name">Drum Machine</div>
                 <div class="instrument-description">
@@ -222,7 +33,7 @@
                 </div>
             </a>
 
-            <a href="piano.html" class="instrument-card piano">
+            <a href="html/piano.html" class="instrument-card piano">
                 <div class="instrument-icon">🎹</div>
                 <div class="instrument-name">Piano</div>
                 <div class="instrument-description">
@@ -231,12 +42,21 @@
                 </div>
             </a>
 
-            <a href="guitar.html" class="instrument-card guitar">
+            <a href="html/guitar.html" class="instrument-card guitar">
                 <div class="instrument-icon">🎸</div>
                 <div class="instrument-name">Guitar</div>
                 <div class="instrument-description">
                     Interactive fretboard with chord shapes and scale patterns.
                     Includes multiple tunings, 14 chord types, 14 scales, and music theory learning.
+                </div>
+            </a>
+
+            <a href="html/circle-of-fifths.html" class="instrument-card circle-of-fifths">
+                <div class="instrument-icon">🌀</div>
+                <div class="instrument-name">Circle of Fifths</div>
+                <div class="instrument-description">
+                    Explore music theory with an interactive Circle of Fifths.
+                    Visualize key signatures, relative major/minor keys, and chord relationships.
                 </div>
             </a>
         </div>
@@ -246,16 +66,6 @@
         </div>
     </div>
 
-    <script>
-        function toggleNav() {
-            const hamburger = document.querySelector('.hamburger-menu');
-            const overlay = document.getElementById('navOverlay');
-            const backdrop = document.getElementById('navBackdrop');
-
-            hamburger.classList.toggle('active');
-            overlay.classList.toggle('active');
-            backdrop.classList.toggle('active');
-        }
-    </script>
+    <script src="js/index.js"></script>
 </body>
 </html>

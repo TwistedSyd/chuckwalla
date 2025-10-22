@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piano - Chuckwalla</title>
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/piano.css">
+</head>
+<body>
+    <!-- Navigation Icons -->
+    <div class="nav-icons">
+        <a href="../index.html" class="nav-icon-button" title="Home">🏠</a>
+        <a href="drums.html" class="nav-icon-button" title="Drum Machine">🥁</a>
+        <a href="piano.html" class="nav-icon-button active" title="Piano">🎹</a>
+        <a href="guitar.html" class="nav-icon-button" title="Guitar">🎸</a>
+        <a href="circle-of-fifths.html" class="nav-icon-button" title="Circle of Fifths">🌀</a>
+    </div>
+
+    <div class="container">
+        <h1>🎹 Piano</h1>
+
+        <div class="tab-buttons">
+            <button class="tab-button active" onclick="switchTab('play')">Free Play</button>
+            <button class="tab-button" onclick="switchTab('chords')">Chords</button>
+            <button class="tab-button" onclick="switchTab('scales')">Scales</button>
+            <button class="tab-button" onclick="switchTab('roadmap')">Learning Roadmap 📚</button>
+        </div>
+
+        <!-- Free Play Tab -->
+        <div id="play-tab" class="tab-content active">
+            <div class="controls-section">
+                <div class="control-group">
+                    <h3>Currently Playing</h3>
+                    <div id="current-chord-display" style="padding: 8px 12px; background: rgba(0, 0, 0, 0.3); border-radius: 5px; min-height: 38px;">
+                        <div style="color: #00d9ff; font-size: 16px; font-weight: bold; margin-bottom: 2px;" id="chord-name">-</div>
+                        <div style="color: #aaa; font-size: 12px;" id="chord-notes">Play some keys to see the chord</div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Options</h3>
+                    <label style="display: flex; align-items: center; gap: 10px; color: #aaa; cursor: pointer; margin-bottom: 6px;">
+                        <input type="checkbox" id="sustain-toggle" style="width: 18px; height: 18px; cursor: pointer;">
+                        <span>Sustain Pedal</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 10px; color: #aaa; cursor: pointer;">
+                        <input type="checkbox" id="note-labels-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
+                        <span>Show Note Labels</span>
+                    </label>
+                </div>
+
+                <div class="control-group">
+                    <h3>Effects</h3>
+                    <div class="action-buttons" style="display: grid; grid-template-columns: 1fr 1fr; gap: 3px;">
+                        <button id="chorus-btn" class="effect-btn" onclick="toggleEffect('chorus')">Chorus</button>
+                        <button id="reverb-btn" class="effect-btn" onclick="toggleEffect('reverb')">Reverb</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="piano-container">
+                <div class="piano-octave-controls">
+                    <span class="octave-label">Octave</span>
+                    <button class="octave-btn" onclick="changeOctave(-1)">−</button>
+                    <span class="octave-value" id="octave-display-play">4</span>
+                    <button class="octave-btn" onclick="changeOctave(1)">+</button>
+                </div>
+                <div class="piano-keyboard" id="piano-keyboard-play">
+                    <!-- Piano keys will be generated here -->
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <h2>Free Play Mode</h2>
+                <p>Click on the piano keys or use your keyboard to play notes. Experiment with melodies and practice your skills!</p>
+            </div>
+        </div>
+
+        <!-- Chords Tab -->
+        <div id="chords-tab" class="tab-content">
+            <div class="controls-section">
+                <div class="control-group">
+                    <h3>Root Note</h3>
+                    <select id="root-note-chord">
+                        <option value="C">C</option>
+                        <option value="C#">C# / Db</option>
+                        <option value="D">D</option>
+                        <option value="D#">D# / Eb</option>
+                        <option value="E">E</option>
+                        <option value="F">F</option>
+                        <option value="F#">F# / Gb</option>
+                        <option value="G">G</option>
+                        <option value="G#">G# / Ab</option>
+                        <option value="A">A</option>
+                        <option value="A#">A# / Bb</option>
+                        <option value="B">B</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <h3>Chord Type</h3>
+                    <select id="chord-type">
+                        <option value="major">Major</option>
+                        <option value="minor">Minor</option>
+                        <option value="diminished">Diminished</option>
+                        <option value="augmented">Augmented</option>
+                        <option value="sus2">Suspended 2nd (sus2)</option>
+                        <option value="sus4">Suspended 4th (sus4)</option>
+                        <option value="major7">Major 7th</option>
+                        <option value="minor7">Minor 7th</option>
+                        <option value="dominant7">Dominant 7th</option>
+                        <option value="diminished7">Diminished 7th</option>
+                        <option value="major6">Major 6th</option>
+                        <option value="minor6">Minor 6th</option>
+                        <option value="major9">Major 9th</option>
+                        <option value="minor9">Minor 9th</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <h3>Actions</h3>
+                    <div class="action-buttons">
+                        <button onclick="playChordOrScale()">▶ Play Chord</button>
+                        <button onclick="playChordOrScaleArpeggio()">🎵 Play Arpeggio</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="piano-container">
+                <div class="piano-octave-controls">
+                    <span class="octave-label">Octave</span>
+                    <button class="octave-btn" onclick="changeOctaveTheory(-1)">−</button>
+                    <span class="octave-value" id="octave-display-chord">4</span>
+                    <button class="octave-btn" onclick="changeOctaveTheory(1)">+</button>
+                </div>
+                <div class="piano-keyboard" id="piano-keyboard-chord">
+                    <!-- Piano keys will be generated here -->
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <h2>Chord Information</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Notes:</label>
+                        <value id="info-notes-chord">-</value>
+                    </div>
+                    <div class="info-item">
+                        <label>Intervals:</label>
+                        <value id="info-intervals-chord">-</value>
+                    </div>
+                    <div class="info-item">
+                        <label>Formula:</label>
+                        <value id="info-formula-chord">-</value>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scales Tab -->
+        <div id="scales-tab" class="tab-content">
+            <div class="controls-section">
+                <div class="control-group">
+                    <h3>Root Note</h3>
+                    <select id="root-note-scale">
+                        <option value="C">C</option>
+                        <option value="C#">C# / Db</option>
+                        <option value="D">D</option>
+                        <option value="D#">D# / Eb</option>
+                        <option value="E">E</option>
+                        <option value="F">F</option>
+                        <option value="F#">F# / Gb</option>
+                        <option value="G">G</option>
+                        <option value="G#">G# / Ab</option>
+                        <option value="A">A</option>
+                        <option value="A#">A# / Bb</option>
+                        <option value="B">B</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <h3>Scale Type</h3>
+                    <select id="scale-type">
+                        <option value="major">Major (Ionian)</option>
+                        <option value="minor">Natural Minor (Aeolian)</option>
+                        <option value="harmonic-minor">Harmonic Minor</option>
+                        <option value="melodic-minor">Melodic Minor</option>
+                        <option value="pentatonic-major">Pentatonic Major</option>
+                        <option value="pentatonic-minor">Pentatonic Minor</option>
+                        <option value="blues">Blues</option>
+                        <option value="dorian">Dorian</option>
+                        <option value="phrygian">Phrygian</option>
+                        <option value="lydian">Lydian</option>
+                        <option value="mixolydian">Mixolydian</option>
+                        <option value="locrian">Locrian</option>
+                        <option value="chromatic">Chromatic</option>
+                        <option value="whole-tone">Whole Tone</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <h3>Actions</h3>
+                    <div class="action-buttons">
+                        <button onclick="playChordOrScaleArpeggio()">🎵 Play Ascending</button>
+                        <button onclick="playScaleDescending()">🎵 Play Descending</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="piano-container">
+                <div class="piano-octave-controls">
+                    <span class="octave-label">Octave</span>
+                    <button class="octave-btn" onclick="changeOctaveTheory(-1)">−</button>
+                    <span class="octave-value" id="octave-display-scale">4</span>
+                    <button class="octave-btn" onclick="changeOctaveTheory(1)">+</button>
+                </div>
+                <div class="piano-keyboard" id="piano-keyboard-scale">
+                    <!-- Piano keys will be generated here -->
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <h2>Scale Information</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Notes:</label>
+                        <value id="info-notes-scale">-</value>
+                    </div>
+                    <div class="info-item">
+                        <label>Intervals:</label>
+                        <value id="info-intervals-scale">-</value>
+                    </div>
+                    <div class="info-item">
+                        <label>Formula:</label>
+                        <value id="info-formula-scale">-</value>
+                    </div>
+                </div>
+                <div class="info-item" style="margin-top: 15px;">
+                    <label>Diatonic Chords:</label>
+                    <div id="chord-buttons-container" class="chord-buttons-container">
+                        <!-- Chord buttons will be generated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Learning Roadmap Tab -->
+        <div id="roadmap-tab" class="tab-content">
+            <div class="roadmap-container">
+                <div class="roadmap-section">
+                    <span class="level-badge level-beginner">LEVEL 1: BEGINNER</span>
+                    <h2>🎵 Understanding the Basics</h2>
+                    <p>Start your musical journey by understanding the fundamental building blocks of music.</p>
+
+                    <h3>1. The Musical Alphabet</h3>
+                    <ul>
+                        <li>Learn the 12 notes: C, C#, D, D#, E, F, F#, G, G#, A, A#, B</li>
+                        <li>Understand whole steps (2 semitones) and half steps (1 semitone)</li>
+                        <li>Notice that there's no black key between E-F and B-C</li>
+                    </ul>
+
+                    <div class="tip-box">
+                        <strong>Practice Tip:</strong> Use the Free Play tab to familiarize yourself with the keyboard layout. Play each note and listen to how they sound.
+                    </div>
+
+                    <h3>2. Major Scales</h3>
+                    <ul>
+                        <li>Start with C Major (all white keys: C-D-E-F-G-A-B-C)</li>
+                        <li>Learn the pattern: Whole-Whole-Half-Whole-Whole-Whole-Half (W-W-H-W-W-W-H)</li>
+                        <li>Practice in different keys using the Scales tab</li>
+                    </ul>
+
+                    <div class="tip-box">
+                        <strong>Practice Tip:</strong> Use the Scales tab, select "Major (Ionian)", and try different root notes. Click "Play Ascending" to hear the scale.
+                    </div>
+
+                    <h3>3. Basic Chords - Triads</h3>
+                    <ul>
+                        <li>Major chords: Root + Major 3rd + Perfect 5th (sounds happy)</li>
+                        <li>Minor chords: Root + Minor 3rd + Perfect 5th (sounds sad)</li>
+                        <li>Practice C Major (C-E-G) and A Minor (A-C-E)</li>
+                    </ul>
+
+                    <div class="tip-box">
+                        <strong>Practice Tip:</strong> Use the Chords tab to explore Major and Minor chords. Click on different root notes to hear how they sound.
+                    </div>
+                </div>
+
+                <div class="roadmap-section">
+                    <span class="level-badge level-beginner">LEVEL 2: BEGINNER+</span>
+                    <h2>🎼 Building Chord Progressions</h2>
+                    <p>Learn how chords work together to create music.</p>
+
+                    <h3>4. Diatonic Chords</h3>
+                    <ul>
+                        <li>Every scale has 7 diatonic chords built from its notes</li>
+                        <li>In C Major: C (I), Dm (ii), Em (iii), F (IV), G (V), Am (vi), Bdim (vii°)</li>
+                        <li>Roman numerals show the position (I, II, III, IV, V, VI, VII)</li>
+                        <li>Uppercase = Major, lowercase = minor, ° = diminished</li>
+                    </ul>
+
+                    <div class="tip-box">
+                        <strong>Practice Tip:</strong> Go to Scales tab, select a Major scale, and click on each diatonic chord button to see and hear them on the keyboard.
+                    </div>
+
+                    <h3>5. Common Chord Progressions</h3>
+                    <ul>
+                        <li>I-IV-V (e.g., C-F-G in C Major) - Classic rock/pop</li>
+                        <li>I-V-vi-IV (e.g., C-G-Am-F) - Very popular in modern music</li>
+                        <li>ii-V-I (e.g., Dm-G-C) - Jazz standard</li>
+                        <li>I-vi-IV-V (e.g., C-Am-F-G) - 50s progression</li>
+                    </ul>
+
+                    <h3>6. Minor Scales</h3>
+                    <ul>
+                        <li>Natural Minor: Most basic minor scale (sad, melancholic)</li>
+                        <li>Harmonic Minor: Raised 7th degree (exotic, dramatic)</li>
+                        <li>Melodic Minor: Raised 6th and 7th (smooth, jazzy)</li>
+                    </ul>
+                </div>
+
+                <div class="roadmap-section">
+                    <span class="level-badge level-intermediate">LEVEL 3: INTERMEDIATE</span>
+                    <h2>🎸 Advanced Chords & Techniques</h2>
+                    <p>Expand your musical vocabulary with richer harmonies.</p>
+
+                    <h3>7. 7th Chords</h3>
+                    <ul>
+                        <li>Major 7th: Dreamy, jazzy sound (e.g., Cmaj7)</li>
+                        <li>Dominant 7th: Tension, wants to resolve (e.g., G7)</li>
+                        <li>Minor 7th: Smooth, mellow (e.g., Dm7)</li>
+                        <li>Diminished 7th: Very tense, transition chord</li>
+                    </ul>
+
+                    <h3>8. Suspended & Extended Chords</h3>
+                    <ul>
+                        <li>sus2 & sus4: Create tension and release</li>
+                        <li>6th chords: Add color and jazz flavor</li>
+                        <li>9th chords: Complex, sophisticated sound</li>
+                        <li>Use these to add variety to basic progressions</li>
+                    </ul>
+
+                    <h3>9. Modes</h3>
+                    <ul>
+                        <li>Dorian: Minor with raised 6th (jazzy, funky)</li>
+                        <li>Phrygian: Minor with flat 2nd (Spanish, dark)</li>
+                        <li>Lydian: Major with raised 4th (dreamy, ethereal)</li>
+                        <li>Mixolydian: Major with flat 7th (blues, rock)</li>
+                        <li>Locrian: Most dissonant mode (rarely used)</li>
+                    </ul>
+
+                    <div class="tip-box">
+                        <strong>Practice Tip:</strong> Explore different modes in the Scales tab. Each mode has a unique character and feeling.
+                    </div>
+                </div>
+
+                <div class="roadmap-section">
+                    <span class="level-badge level-advanced">LEVEL 4: ADVANCED</span>
+                    <h2>🎹 Mastery & Creativity</h2>
+                    <p>Apply your knowledge to create original music.</p>
+
+                    <h3>10. Chord Substitutions</h3>
+                    <ul>
+                        <li>Replace I with I6 or Imaj7 for variety</li>
+                        <li>Use relative minors (vi for I, iii for V)</li>
+                        <li>Secondary dominants (V7/V, V7/IV)</li>
+                        <li>Tritone substitutions in jazz</li>
+                    </ul>
+
+                    <h3>11. Modal Interchange</h3>
+                    <ul>
+                        <li>Borrow chords from parallel modes</li>
+                        <li>Use minor iv in major keys for emotion</li>
+                        <li>Flat VI and flat VII from natural minor</li>
+                        <li>Creates unexpected but pleasing sounds</li>
+                    </ul>
+
+                    <h3>12. Creating Your Own Music</h3>
+                    <ul>
+                        <li>Start with a chord progression you like</li>
+                        <li>Compose melodies using the scale notes</li>
+                        <li>Add rhythm and dynamics</li>
+                        <li>Experiment with different chord voicings</li>
+                        <li>Trust your ears - if it sounds good, it is good!</li>
+                    </ul>
+
+                    <div class="tip-box">
+                        <strong>Final Tip:</strong> Music theory is a tool, not a rule book. Use what you've learned to express yourself creatively. The best way to learn is to play and experiment!
+                    </div>
+                </div>
+
+                <div class="roadmap-section">
+                    <h2>📚 Practice Suggestions</h2>
+                    <p>Consistent practice is key to mastering music theory and piano.</p>
+                    <ul>
+                        <li>Spend 10-15 minutes daily exploring scales in different keys</li>
+                        <li>Practice chord progressions in multiple keys for muscle memory</li>
+                        <li>Listen to your favorite songs and try to identify the chords</li>
+                        <li>Experiment with creating your own progressions</li>
+                        <li>Record yourself and listen back to identify areas for improvement</li>
+                        <li>Learn songs you love - it's more motivating than exercises</li>
+                        <li>Join online communities to share your progress and get feedback</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/common.js"></script>
+    <script src="../js/piano.js"></script>
+</body>
+</html>
