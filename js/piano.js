@@ -227,8 +227,8 @@
 
             const whiteKeyWidth = 50;
 
-            // Generate 2 octaves worth of keys
-            for (let oct = octave; oct <= octave + 1; oct++) {
+            // Generate 2 octaves worth of keys (starting one octave below to center the main octave)
+            for (let oct = octave - 1; oct <= octave; oct++) {
                 notes.forEach((note, index) => {
                     const isBlackKey = note.includes('#');
                     const key = document.createElement('div');
@@ -247,13 +247,13 @@
                         // Find keyboard key for this note in the correct octave
                         let keyboardKey = null;
 
-                        if (oct === octave) {
-                            // First octave - look for keys in firstOctaveKeys
+                        if (oct === octave - 1) {
+                            // First octave (octave-1) - look for keys in firstOctaveKeys
                             keyboardKey = Object.keys(keyMap).find(k =>
                                 keyMap[k] === note && firstOctaveKeys.includes(k)
                             );
-                        } else if (oct === octave + 1) {
-                            // Second octave - look for keys NOT in firstOctaveKeys
+                        } else if (oct === octave) {
+                            // Second octave (octave) - look for keys NOT in firstOctaveKeys
                             keyboardKey = Object.keys(keyMap).find(k =>
                                 keyMap[k] === note && !firstOctaveKeys.includes(k)
                             );
@@ -268,7 +268,7 @@
                     }
 
                     if (isBlackKey) {
-                        const octaveOffset = (oct - octave) * 7 * whiteKeyWidth;
+                        const octaveOffset = (oct - (octave - 1)) * 7 * whiteKeyWidth;
                         const blackKeyPosition = blackKeyPositions[note];
                         key.style.left = `${octaveOffset + (blackKeyPosition * whiteKeyWidth)}px`;
                     }
@@ -309,7 +309,7 @@
             }
 
             // Add one extra C key at the end (25th key like most MIDI controllers)
-            const extraOct = octave + 2;
+            const extraOct = octave + 1;
             const extraKey = document.createElement('div');
             extraKey.className = 'key white-key';
             extraKey.dataset.note = 'C';
@@ -522,6 +522,7 @@
             });
 
             // Calculate octaves for each note to ensure ascending order starting from root
+            // Start from leftmost octave (currentOctaveTheory - 1)
             const octaves = [];
             let lastNoteIndex = rootIndex;
             let currentOctaveOffset = 0;
@@ -534,7 +535,7 @@
                     currentOctaveOffset++;
                 }
 
-                octaves.push(currentOctaveTheory + currentOctaveOffset);
+                octaves.push(currentOctaveTheory - 1 + currentOctaveOffset);
                 lastNoteIndex = noteIndex;
             });
 
@@ -676,6 +677,7 @@
             const rootIndex = notes.indexOf(root);
 
             // Calculate octaves for each note to ensure ascending order (root position)
+            // Start from leftmost octave (currentOctaveTheory - 1)
             const octaves = [];
             let lastNoteIndex = rootIndex;
             let currentOctaveOffset = 0;
@@ -688,7 +690,7 @@
                     currentOctaveOffset++;
                 }
 
-                octaves.push(currentOctaveTheory + currentOctaveOffset);
+                octaves.push(currentOctaveTheory - 1 + currentOctaveOffset);
                 lastNoteIndex = noteIndex;
             });
 
@@ -731,6 +733,7 @@
             }
 
             // Pre-calculate octaves for each note to ensure ascending order (root position)
+            // Start from leftmost octave (currentOctaveTheory - 1)
             const octaves = [];
             let lastNoteIndex = rootIndex;
             let currentOctaveOffset = 0;
@@ -743,7 +746,7 @@
                     currentOctaveOffset++;
                 }
 
-                octaves.push(currentOctaveTheory + currentOctaveOffset);
+                octaves.push(currentOctaveTheory - 1 + currentOctaveOffset);
                 lastNoteIndex = noteIndex;
             });
 
@@ -785,6 +788,7 @@
             notesToPlay.push(chordNotes[0]); // Add root note
 
             // Pre-calculate octaves for each note to ensure ascending order (root position)
+            // Start from leftmost octave (currentOctaveTheory - 1)
             const octaves = [];
             let lastNoteIndex = rootIndex;
             let currentOctaveOffset = 0;
@@ -797,7 +801,7 @@
                     currentOctaveOffset++;
                 }
 
-                octaves.push(currentOctaveTheory + currentOctaveOffset);
+                octaves.push(currentOctaveTheory - 1 + currentOctaveOffset);
                 lastNoteIndex = noteIndex;
             });
 
@@ -1029,14 +1033,15 @@
             if (note && !pressedKeys.has(e.key) && !e.repeat) {
                 pressedKeys.add(e.key);
                 const octaveOffset = getOctaveOffset(e.key);
-                playNote(note, currentOctavePlay + octaveOffset);
+                // Adjust for the keyboard now showing octave-1 to octave
+                playNote(note, currentOctavePlay - 1 + octaveOffset);
 
                 // Track the note for chord detection
                 currentlyPlayingNotes.add(note);
                 updateChordDisplay();
 
                 // Visual feedback - highlight the specific octave on all keyboards
-                const targetOctave = currentOctavePlay + octaveOffset;
+                const targetOctave = currentOctavePlay - 1 + octaveOffset;
                 const keys = document.querySelectorAll(`.piano-keyboard [data-note="${note}"][data-octave="${targetOctave}"]`);
                 keys.forEach(key => key.classList.add('active'));
             }
@@ -1053,11 +1058,154 @@
 
                 // Remove visual feedback from the specific octave on all keyboards
                 const octaveOffset = getOctaveOffset(e.key);
-                const targetOctave = currentOctavePlay + octaveOffset;
+                const targetOctave = currentOctavePlay - 1 + octaveOffset;
                 const keys = document.querySelectorAll(`.piano-keyboard [data-note="${note}"][data-octave="${targetOctave}"]`);
                 keys.forEach(key => key.classList.remove('active'));
             }
         });
+
+        // MIDI Controller Support
+        let midiAccess = null;
+        let midiInput = null;
+        let activeMidiNotes = new Map(); // Track active MIDI notes for note-off
+
+        // Convert MIDI note number to note name and octave
+        function midiNoteToNoteAndOctave(midiNote) {
+            const octave = Math.floor(midiNote / 12) - 1;
+            const noteIndex = midiNote % 12;
+            return { note: notes[noteIndex], octave: octave };
+        }
+
+        // Handle MIDI messages
+        function handleMIDIMessage(message) {
+            const [status, note, velocity] = message.data;
+            const command = status >> 4;
+            const channel = status & 0x0f;
+
+            // Note On (0x9) or Note Off (0x8)
+            if (command === 0x9 || command === 0x8) {
+                const { note: noteName, octave } = midiNoteToNoteAndOctave(note);
+
+                // Note On with velocity > 0
+                if (command === 0x9 && velocity > 0) {
+                    // Play the note
+                    playNote(noteName, octave, 2); // Longer duration for MIDI notes
+
+                    // Track note for chord detection
+                    currentlyPlayingNotes.add(noteName);
+                    updateChordDisplay();
+
+                    // Visual feedback - highlight key on all keyboards
+                    const keys = document.querySelectorAll(`.piano-keyboard [data-note="${noteName}"][data-octave="${octave}"]`);
+                    keys.forEach(key => key.classList.add('active'));
+
+                    // Store the octave for this note
+                    activeMidiNotes.set(note, octave);
+                }
+                // Note Off or Note On with velocity 0
+                else {
+                    // Get the stored octave for this note
+                    const storedOctave = activeMidiNotes.get(note);
+                    if (storedOctave !== undefined) {
+                        // Remove visual feedback
+                        const keys = document.querySelectorAll(`.piano-keyboard [data-note="${noteName}"][data-octave="${storedOctave}"]`);
+                        keys.forEach(key => key.classList.remove('active'));
+
+                        // Remove from tracking
+                        activeMidiNotes.delete(note);
+                    }
+
+                    // Remove from chord detection
+                    currentlyPlayingNotes.delete(noteName);
+                    updateChordDisplay();
+                }
+            }
+        }
+
+        // Initialize MIDI
+        function initMIDI() {
+            if (navigator.requestMIDIAccess) {
+                navigator.requestMIDIAccess()
+                    .then(access => {
+                        midiAccess = access;
+                        console.log('MIDI Access granted');
+
+                        // Get all MIDI inputs
+                        const inputs = midiAccess.inputs.values();
+                        for (let input of inputs) {
+                            console.log(`MIDI Input detected: ${input.name}`);
+                            midiInput = input;
+                            input.onmidimessage = handleMIDIMessage;
+
+                            // Update status indicator
+                            updateMIDIStatus(true, input.name);
+                        }
+
+                        // Listen for device connections/disconnections
+                        midiAccess.onstatechange = (e) => {
+                            if (e.port.type === 'input') {
+                                if (e.port.state === 'connected') {
+                                    console.log(`MIDI device connected: ${e.port.name}`);
+                                    midiInput = e.port;
+                                    e.port.onmidimessage = handleMIDIMessage;
+                                    updateMIDIStatus(true, e.port.name);
+                                } else if (e.port.state === 'disconnected') {
+                                    console.log(`MIDI device disconnected: ${e.port.name}`);
+                                    updateMIDIStatus(false);
+                                }
+                            }
+                        };
+
+                        // If no inputs found, show disconnected status
+                        if (midiAccess.inputs.size === 0) {
+                            updateMIDIStatus(false);
+                        }
+                    })
+                    .catch(err => {
+                        console.log('MIDI Access denied:', err);
+                        updateMIDIStatus(false);
+                    });
+            } else {
+                console.log('Web MIDI API not supported in this browser');
+            }
+        }
+
+        // Update MIDI status indicator in UI
+        function updateMIDIStatus(connected, deviceName = '') {
+            let statusElement = document.getElementById('midi-status');
+
+            // Create status element if it doesn't exist
+            if (!statusElement) {
+                statusElement = document.createElement('div');
+                statusElement.id = 'midi-status';
+                statusElement.style.cssText = `
+                    position: fixed;
+                    top: 15px;
+                    right: 15px;
+                    padding: 8px 15px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    font-family: 'Courier New', monospace;
+                    z-index: 1000;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                `;
+                document.body.appendChild(statusElement);
+            }
+
+            if (connected) {
+                statusElement.textContent = `🎹 MIDI: ${deviceName}`;
+                statusElement.style.background = '#10b981';
+                statusElement.style.color = '#fff';
+                statusElement.style.border = '2px solid #059669';
+            } else {
+                statusElement.textContent = '🎹 MIDI: Disconnected';
+                statusElement.style.background = '#374151';
+                statusElement.style.color = '#9ca3af';
+                statusElement.style.border = '2px solid #4b5563';
+            }
+        }
 
         // Initialize - restore saved tab or default to 'play'
         const savedTab = localStorage.getItem('pianoCurrentTab') || 'play';
@@ -1090,4 +1238,7 @@
             generateKeyboard('piano-keyboard-scale', currentOctaveTheory, true);
             updateTheoryDisplay();
         }
+
+        // Initialize MIDI after a short delay to ensure page is fully loaded
+        setTimeout(initMIDI, 500);
 

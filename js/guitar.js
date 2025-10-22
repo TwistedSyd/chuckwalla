@@ -147,57 +147,7 @@
         function playNote(note, octave, duration = 0.5) {
             const now = audioContext.currentTime;
 
-            if (currentGuitarTone === 'strings') {
-                // Strings effect with multiple oscillators for richness
-                const osc1 = audioContext.createOscillator();
-                const osc2 = audioContext.createOscillator();
-                const osc3 = audioContext.createOscillator();
-                const gain = audioContext.createGain();
-
-                const freq = getNoteFrequency(note, octave);
-                osc1.type = 'sine';
-                osc2.type = 'sine';
-                osc3.type = 'sine';
-
-                // Slightly detune for chorus effect
-                osc1.frequency.value = freq;
-                osc2.frequency.value = freq * 1.003;
-                osc3.frequency.value = freq * 0.997;
-
-                // Slow attack, long sustain for strings
-                const attackTime = 0.08;
-                const releaseTime = 0.5;
-                const peakGain = 0.15;
-
-                gain.gain.setValueAtTime(0.001, now);
-                gain.gain.exponentialRampToValueAtTime(peakGain, now + attackTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + duration + releaseTime);
-
-                osc1.connect(gain);
-                osc2.connect(gain);
-                osc3.connect(gain);
-
-                // Route through effects
-                if (preGainNode && gainNode && filterNode && lowCutNode) {
-                    gain.connect(preGainNode);
-                    preGainNode.connect(gainNode);
-                    gainNode.connect(lowCutNode);
-                    lowCutNode.connect(filterNode);
-                    filterNode.connect(audioContext.destination);
-                } else {
-                    gain.connect(audioContext.destination);
-                }
-
-                osc1.start(now);
-                osc2.start(now);
-                osc3.start(now);
-                osc1.stop(now + duration + releaseTime);
-                osc2.stop(now + duration + releaseTime);
-                osc3.stop(now + duration + releaseTime);
-                return;
-            }
-
-            // Clean guitar tone
+            // Create oscillator and gain
             const osc = audioContext.createOscillator();
             const gain = audioContext.createGain();
 
@@ -214,21 +164,56 @@
 
             osc.connect(gain);
 
-            // Route through guitar effects if they exist
-            if (preGainNode && gainNode && distortionNode && filterNode && lowCutNode) {
-                // Signal chain: gain -> preGain -> distortion -> gainNode -> lowCut -> filter -> output
+            // Route through effects chain based on current tone
+            if (preGainNode && gainNode && filterNode && lowCutNode) {
                 gain.connect(preGainNode);
-
-                if (distortionNode.curve) {
-                    preGainNode.connect(distortionNode);
-                    distortionNode.connect(gainNode);
-                } else {
-                    preGainNode.connect(gainNode);
-                }
-
+                preGainNode.connect(gainNode);
                 gainNode.connect(lowCutNode);
                 lowCutNode.connect(filterNode);
-                filterNode.connect(audioContext.destination);
+
+                // Disconnect filterNode from all outputs to prevent accumulation
+                try {
+                    filterNode.disconnect();
+                } catch (e) {
+                    // Already disconnected, ignore
+                }
+
+                // Apply chorus effect if enabled
+                if (currentGuitarTone === 'chorus' && chorusNodes) {
+                    const dryGain = audioContext.createGain();
+                    const wetGain = audioContext.createGain();
+                    dryGain.gain.value = 0.6; // Dry signal
+                    wetGain.gain.value = 0.4; // Wet signal
+
+                    filterNode.connect(dryGain);
+                    filterNode.connect(chorusNodes.delay);
+                    chorusNodes.delay.connect(wetGain);
+
+                    const merger = audioContext.createGain();
+                    dryGain.connect(merger);
+                    wetGain.connect(merger);
+                    merger.connect(audioContext.destination);
+                }
+                // Apply reverb effect if enabled
+                else if (currentGuitarTone === 'reverb' && reverbNode) {
+                    const dryGain = audioContext.createGain();
+                    const wetGain = audioContext.createGain();
+                    dryGain.gain.value = 0.5; // Dry signal
+                    wetGain.gain.value = 0.5; // Wet signal (more pronounced)
+
+                    filterNode.connect(dryGain);
+                    filterNode.connect(reverbNode);
+                    reverbNode.connect(wetGain);
+
+                    const merger = audioContext.createGain();
+                    dryGain.connect(merger);
+                    wetGain.connect(merger);
+                    merger.connect(audioContext.destination);
+                }
+                // No effect - just connect to destination
+                else {
+                    filterNode.connect(audioContext.destination);
+                }
             } else {
                 gain.connect(audioContext.destination);
             }
@@ -960,10 +945,11 @@
         }
 
         // Guitar tone toggle function and audio effects
-        let currentGuitarTone = 'clean';
+        let currentGuitarTone = 'none';
         let preGainNode = null;
         let gainNode = null;
-        let distortionNode = null;
+        let chorusNodes = null;
+        let reverbNode = null;
         let filterNode = null;
         let lowCutNode = null;
 
@@ -971,7 +957,6 @@
         function setupGuitarEffects() {
             preGainNode = audioContext.createGain();
             gainNode = audioContext.createGain();
-            distortionNode = audioContext.createWaveShaper();
             filterNode = audioContext.createBiquadFilter();
             lowCutNode = audioContext.createBiquadFilter();
 
@@ -981,67 +966,66 @@
             filterNode.frequency.value = 5000;
             lowCutNode.type = 'highpass';
             lowCutNode.frequency.value = 80;
-        }
 
-        function makeDistortionCurve(amount) {
-            const k = typeof amount === 'number' ? amount : 50;
-            const n_samples = 44100;
-            const curve = new Float32Array(n_samples);
-            const deg = Math.PI / 180;
+            // Create chorus effect (delay with LFO)
+            const chorusDelay = audioContext.createDelay();
+            const chorusLFO = audioContext.createOscillator();
+            const chorusDepth = audioContext.createGain();
 
-            for (let i = 0; i < n_samples; i++) {
-                const x = i * 2 / n_samples - 1;
-                curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+            chorusDelay.delayTime.value = 0.025; // Base delay
+            chorusLFO.frequency.value = 2; // Modulation speed (2 Hz for noticeable effect)
+            chorusDepth.gain.value = 0.008; // Modulation depth
+
+            chorusLFO.connect(chorusDepth);
+            chorusDepth.connect(chorusDelay.delayTime);
+            chorusLFO.start();
+
+            chorusNodes = {
+                delay: chorusDelay,
+                lfo: chorusLFO,
+                depth: chorusDepth
+            };
+
+            // Create reverb effect (convolver with synthetic impulse response)
+            reverbNode = audioContext.createConvolver();
+            const reverbTime = 3; // 3 seconds of reverb
+            const sampleRate = audioContext.sampleRate;
+            const length = sampleRate * reverbTime;
+            const impulse = audioContext.createBuffer(2, length, sampleRate);
+
+            for (let channel = 0; channel < 2; channel++) {
+                const channelData = impulse.getChannelData(channel);
+                for (let i = 0; i < length; i++) {
+                    // Create exponential decay with random noise
+                    channelData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
+                }
             }
-            return curve;
-        }
-
-        function makeHighGainCurve() {
-            const n_samples = 44100;
-            const curve = new Float32Array(n_samples);
-
-            for (let i = 0; i < n_samples; i++) {
-                const x = i * 2 / n_samples - 1;
-                // Fuzzy overdrive with smooth saturation (less aggressive)
-                curve[i] = Math.tanh(x * 2.5) * 0.9;
-            }
-            return curve;
+            reverbNode.buffer = impulse;
         }
 
         setupGuitarEffects();
 
         window.toggleGuitarTone = function(tone) {
-            // Remove active from all tone buttons
-            document.querySelectorAll('#clean-btn, #strings-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-
-            // Add active to selected tone
-            document.getElementById(`${tone}-btn`).classList.add('active');
-            currentGuitarTone = tone;
-
-            // Configure effects based on tone
-            switch(tone) {
-                case 'clean':
-                    preGainNode.gain.value = 1;
-                    gainNode.gain.value = 1;
-                    distortionNode.curve = null;
-                    filterNode.frequency.value = 5000;
-                    lowCutNode.frequency.value = 80;
-                    break;
-                case 'strings':
-                    // Strings settings - clean with subtle warmth
-                    preGainNode.gain.value = 1;
-                    gainNode.gain.value = 1.1; // Slight boost for presence
-                    distortionNode.curve = null; // No distortion for strings
-                    filterNode.frequency.value = 8000; // Bright, airy sound
-                    lowCutNode.frequency.value = 60; // Keep low warmth
-                    break;
+            // Toggle effect on/off
+            if (currentGuitarTone === tone) {
+                // Turn off the effect
+                currentGuitarTone = 'none';
+                document.getElementById(`${tone}-btn`).classList.remove('active');
+            } else {
+                // Turn on the new effect and turn off any other effect
+                document.querySelectorAll('#chorus-btn, #reverb-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.getElementById(`${tone}-btn`).classList.add('active');
+                currentGuitarTone = tone;
             }
         };
 
         // Chord detection for guitar free play
         let currentlyPlayingNotes = new Set();
+
+        // Store note timeouts to manage note removal
+        const noteTimeouts = new Map();
 
         // Override note click handler to track chord detection
         const originalGenerateFretboard = generateFretboard;
@@ -1052,12 +1036,17 @@
             if (containerId === 'fretboard-play') {
                 const dots = document.querySelectorAll('#fretboard-play .note-dot');
                 dots.forEach(dot => {
-                    const originalClick = dot.onclick;
-                    dot.onclick = function() {
-                        if (originalClick) originalClick.call(this);
+                    // Add additional click handler for chord detection
+                    // The original event listeners from generateFretboard still work
+                    dot.addEventListener('click', function() {
+                        const note = this.dataset.note;
+
+                        // Clear any existing timeout for this note
+                        if (noteTimeouts.has(note)) {
+                            clearTimeout(noteTimeouts.get(note));
+                        }
 
                         // Track notes for chord detection
-                        const note = this.dataset.note;
                         currentlyPlayingNotes.add(note);
 
                         // Flash animation on the display
@@ -1077,15 +1066,22 @@
                             detectGuitarChord();
                         }, 50);
 
-                        // Remove note after a short time
-                        setTimeout(() => {
+                        // Remove note after 3 seconds (longer display time)
+                        const timeout = setTimeout(() => {
                             currentlyPlayingNotes.delete(note);
+                            noteTimeouts.delete(note);
+
                             if (currentlyPlayingNotes.size === 0) {
                                 document.getElementById('chord-name-guitar').textContent = '-';
                                 document.getElementById('chord-notes-guitar').textContent = 'Click notes to see the chord';
+                            } else {
+                                // Re-detect chord with remaining notes
+                                detectGuitarChord();
                             }
-                        }, 1000);
-                    };
+                        }, 3000);
+
+                        noteTimeouts.set(note, timeout);
+                    });
                 });
             }
         };
@@ -1152,4 +1148,9 @@
                 updateScaleDisplay();
             }
         });
+
+        // Re-generate the fretboard if we're on the play tab to attach chord detection
+        if (currentTab === 'play') {
+            generateFretboard('fretboard-play', true);
+        }
 
