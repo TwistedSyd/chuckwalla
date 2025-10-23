@@ -619,8 +619,8 @@
                         cell.appendChild(marker);
                     }
 
-                    // Add click handler for editing
-                    cell.addEventListener('click', function() {
+                    // Add click/touch handler for editing
+                    const handleCellToggle = function() {
                         const step = parseInt(this.dataset.step);
                         const instrument = this.dataset.instrument;
 
@@ -636,6 +636,15 @@
                             currentEditorPattern[instrument].sort((a, b) => a - b);
                             playSound(instrument);
                         }
+                    };
+
+                    // Mouse events
+                    cell.addEventListener('click', handleCellToggle);
+
+                    // Touch events for iPad/mobile
+                    cell.addEventListener('touchstart', function(e) {
+                        e.preventDefault(); // Prevent scrolling
+                        handleCellToggle.call(this);
                     });
 
                     grid.appendChild(cell);

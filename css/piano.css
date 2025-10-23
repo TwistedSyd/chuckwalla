@@ -187,6 +187,7 @@ input[type="range"]::-moz-range-thumb:hover {
     cursor: pointer;
     user-select: none;
     transition: all 0.1s;
+    touch-action: none; /* Prevent default touch behaviors like zooming */
 }
 
 .white-key {

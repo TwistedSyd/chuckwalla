@@ -274,7 +274,7 @@
                     }
 
                     if (isInteractive) {
-                        key.addEventListener('mousedown', () => {
+                        const handleNoteStart = () => {
                             playNote(note, oct);
                             key.classList.add('active');
 
@@ -283,8 +283,9 @@
                                 currentlyPlayingNotes.add(note);
                                 updateChordDisplay();
                             }
-                        });
-                        key.addEventListener('mouseup', () => {
+                        };
+
+                        const handleNoteEnd = () => {
                             key.classList.remove('active');
 
                             // Remove note from chord detection in Free Play tab
@@ -292,15 +293,25 @@
                                 currentlyPlayingNotes.delete(note);
                                 updateChordDisplay();
                             }
-                        });
-                        key.addEventListener('mouseleave', () => {
-                            key.classList.remove('active');
+                        };
 
-                            // Remove note from chord detection in Free Play tab
-                            if (containerId === 'piano-keyboard-play') {
-                                currentlyPlayingNotes.delete(note);
-                                updateChordDisplay();
-                            }
+                        // Mouse events
+                        key.addEventListener('mousedown', handleNoteStart);
+                        key.addEventListener('mouseup', handleNoteEnd);
+                        key.addEventListener('mouseleave', handleNoteEnd);
+
+                        // Touch events for iPad/mobile
+                        key.addEventListener('touchstart', (e) => {
+                            e.preventDefault(); // Prevent scrolling
+                            handleNoteStart();
+                        });
+                        key.addEventListener('touchend', (e) => {
+                            e.preventDefault();
+                            handleNoteEnd();
+                        });
+                        key.addEventListener('touchcancel', (e) => {
+                            e.preventDefault();
+                            handleNoteEnd();
                         });
                     }
 
@@ -322,7 +333,7 @@
             extraKey.appendChild(extraLabel);
 
             if (isInteractive) {
-                extraKey.addEventListener('mousedown', () => {
+                const handleExtraNoteStart = () => {
                     playNote('C', extraOct);
                     extraKey.classList.add('active');
 
@@ -331,8 +342,9 @@
                         currentlyPlayingNotes.add('C');
                         updateChordDisplay();
                     }
-                });
-                extraKey.addEventListener('mouseup', () => {
+                };
+
+                const handleExtraNoteEnd = () => {
                     extraKey.classList.remove('active');
 
                     // Remove note from chord detection in Free Play tab
@@ -340,15 +352,25 @@
                         currentlyPlayingNotes.delete('C');
                         updateChordDisplay();
                     }
-                });
-                extraKey.addEventListener('mouseleave', () => {
-                    extraKey.classList.remove('active');
+                };
 
-                    // Remove note from chord detection in Free Play tab
-                    if (containerId === 'piano-keyboard-play') {
-                        currentlyPlayingNotes.delete('C');
-                        updateChordDisplay();
-                    }
+                // Mouse events
+                extraKey.addEventListener('mousedown', handleExtraNoteStart);
+                extraKey.addEventListener('mouseup', handleExtraNoteEnd);
+                extraKey.addEventListener('mouseleave', handleExtraNoteEnd);
+
+                // Touch events for iPad/mobile
+                extraKey.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    handleExtraNoteStart();
+                });
+                extraKey.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    handleExtraNoteEnd();
+                });
+                extraKey.addEventListener('touchcancel', (e) => {
+                    e.preventDefault();
+                    handleExtraNoteEnd();
                 });
             }
 
@@ -379,61 +401,40 @@
             // Build effects chain
             let currentNode = gain;
 
-            // Apply gain/distortion effect
-            if (effects.gain.enabled) {
-                currentNode.connect(effects.gain.node);
-                currentNode = effects.gain.node;
-            }
+            // Apply effects only in Free Play tab (only Chorus or Reverb, not both)
+            if (currentTab === 'play') {
+                // Apply chorus effect if enabled
+                if (effects.chorus.enabled) {
+                    const dryGain = audioContext.createGain();
+                    const wetGain = audioContext.createGain();
+                    dryGain.gain.value = 0.6;
+                    wetGain.gain.value = 0.4;
 
-            // Apply chorus effect
-            if (effects.chorus.enabled) {
-                const dryGain = audioContext.createGain();
-                const wetGain = audioContext.createGain();
-                dryGain.gain.value = 0.7;
-                wetGain.gain.value = 0.3;
+                    currentNode.connect(dryGain);
+                    currentNode.connect(effects.chorus.node.delay);
+                    effects.chorus.node.delay.connect(wetGain);
 
-                currentNode.connect(dryGain);
-                currentNode.connect(effects.chorus.node.delay);
-                effects.chorus.node.delay.connect(wetGain);
+                    const merger = audioContext.createGain();
+                    dryGain.connect(merger);
+                    wetGain.connect(merger);
+                    currentNode = merger;
+                }
+                // Apply reverb effect if enabled
+                else if (effects.reverb.enabled) {
+                    const dryGain = audioContext.createGain();
+                    const wetGain = audioContext.createGain();
+                    dryGain.gain.value = 0.5;
+                    wetGain.gain.value = 0.5;
 
-                const merger = audioContext.createGain();
-                dryGain.connect(merger);
-                wetGain.connect(merger);
-                currentNode = merger;
-            }
+                    currentNode.connect(dryGain);
+                    currentNode.connect(effects.reverb.node);
+                    effects.reverb.node.connect(wetGain);
 
-            // Apply flanger effect
-            if (effects.flanger.enabled) {
-                const dryGain = audioContext.createGain();
-                const wetGain = audioContext.createGain();
-                dryGain.gain.value = 0.7;
-                wetGain.gain.value = 0.3;
-
-                currentNode.connect(dryGain);
-                currentNode.connect(effects.flanger.node.delay);
-                effects.flanger.node.delay.connect(wetGain);
-
-                const merger = audioContext.createGain();
-                dryGain.connect(merger);
-                wetGain.connect(merger);
-                currentNode = merger;
-            }
-
-            // Apply reverb effect
-            if (effects.reverb.enabled) {
-                const dryGain = audioContext.createGain();
-                const wetGain = audioContext.createGain();
-                dryGain.gain.value = 0.6;
-                wetGain.gain.value = 0.4;
-
-                currentNode.connect(dryGain);
-                currentNode.connect(effects.reverb.node);
-                effects.reverb.node.connect(wetGain);
-
-                const merger = audioContext.createGain();
-                dryGain.connect(merger);
-                wetGain.connect(merger);
-                currentNode = merger;
+                    const merger = audioContext.createGain();
+                    dryGain.connect(merger);
+                    wetGain.connect(merger);
+                    currentNode = merger;
+                }
             }
 
             // Connect to destination
@@ -918,13 +919,23 @@
 
         // Toggle audio effect
         function toggleEffect(effectName) {
-            effects[effectName].enabled = !effects[effectName].enabled;
-            const button = document.getElementById(`${effectName}-btn`);
-
+            // Toggle effect on/off (like guitar effects)
             if (effects[effectName].enabled) {
-                button.classList.add('active');
+                // Turn off the effect
+                effects[effectName].enabled = false;
+                document.getElementById(`${effectName}-btn`).classList.remove('active');
             } else {
-                button.classList.remove('active');
+                // Turn off all other effects first
+                document.querySelectorAll('#chorus-btn, #reverb-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                Object.keys(effects).forEach(key => {
+                    effects[key].enabled = false;
+                });
+
+                // Turn on the new effect
+                effects[effectName].enabled = true;
+                document.getElementById(`${effectName}-btn`).classList.add('active');
             }
         }
 

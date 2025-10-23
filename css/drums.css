@@ -132,6 +132,7 @@ h2 {
     position: relative;
     max-width: 35px;
     max-height: 35px;
+    touch-action: none; /* Prevent default touch behaviors like zooming */
 }
 
 .grid-cell.active {

@@ -164,7 +164,7 @@
 
             osc.connect(gain);
 
-            // Route through effects chain based on current tone
+            // Route through effects chain based on current tone (only in Free Play tab)
             if (preGainNode && gainNode && filterNode && lowCutNode) {
                 gain.connect(preGainNode);
                 preGainNode.connect(gainNode);
@@ -178,40 +178,46 @@
                     // Already disconnected, ignore
                 }
 
-                // Apply chorus effect if enabled
-                if (currentGuitarTone === 'chorus' && chorusNodes) {
-                    const dryGain = audioContext.createGain();
-                    const wetGain = audioContext.createGain();
-                    dryGain.gain.value = 0.6; // Dry signal
-                    wetGain.gain.value = 0.4; // Wet signal
+                // Apply effects only in Free Play tab
+                if (currentTab === 'play') {
+                    // Apply chorus effect if enabled
+                    if (currentGuitarTone === 'chorus' && chorusNodes) {
+                        const dryGain = audioContext.createGain();
+                        const wetGain = audioContext.createGain();
+                        dryGain.gain.value = 0.6; // Dry signal
+                        wetGain.gain.value = 0.4; // Wet signal
 
-                    filterNode.connect(dryGain);
-                    filterNode.connect(chorusNodes.delay);
-                    chorusNodes.delay.connect(wetGain);
+                        filterNode.connect(dryGain);
+                        filterNode.connect(chorusNodes.delay);
+                        chorusNodes.delay.connect(wetGain);
 
-                    const merger = audioContext.createGain();
-                    dryGain.connect(merger);
-                    wetGain.connect(merger);
-                    merger.connect(audioContext.destination);
-                }
-                // Apply reverb effect if enabled
-                else if (currentGuitarTone === 'reverb' && reverbNode) {
-                    const dryGain = audioContext.createGain();
-                    const wetGain = audioContext.createGain();
-                    dryGain.gain.value = 0.5; // Dry signal
-                    wetGain.gain.value = 0.5; // Wet signal (more pronounced)
+                        const merger = audioContext.createGain();
+                        dryGain.connect(merger);
+                        wetGain.connect(merger);
+                        merger.connect(audioContext.destination);
+                    }
+                    // Apply reverb effect if enabled
+                    else if (currentGuitarTone === 'reverb' && reverbNode) {
+                        const dryGain = audioContext.createGain();
+                        const wetGain = audioContext.createGain();
+                        dryGain.gain.value = 0.5; // Dry signal
+                        wetGain.gain.value = 0.5; // Wet signal (more pronounced)
 
-                    filterNode.connect(dryGain);
-                    filterNode.connect(reverbNode);
-                    reverbNode.connect(wetGain);
+                        filterNode.connect(dryGain);
+                        filterNode.connect(reverbNode);
+                        reverbNode.connect(wetGain);
 
-                    const merger = audioContext.createGain();
-                    dryGain.connect(merger);
-                    wetGain.connect(merger);
-                    merger.connect(audioContext.destination);
-                }
-                // No effect - just connect to destination
-                else {
+                        const merger = audioContext.createGain();
+                        dryGain.connect(merger);
+                        wetGain.connect(merger);
+                        merger.connect(audioContext.destination);
+                    }
+                    // No effect - just connect to destination
+                    else {
+                        filterNode.connect(audioContext.destination);
+                    }
+                } else {
+                    // In Chords/Scales tabs, no effects - just clean sound
                     filterNode.connect(audioContext.destination);
                 }
             } else {
@@ -348,8 +354,8 @@
                         dot.dataset.string = stringIndex;
                         dot.dataset.fret = fret;
 
-                        // Click handler
-                        dot.addEventListener('click', function() {
+                        // Click/Touch handler
+                        const handleNotePlay = function() {
                             playNote(this.dataset.note, parseInt(this.dataset.octave), 0.8);
 
                             // Visual feedback
@@ -359,14 +365,21 @@
                                 this.style.transform = 'translate(-50%, -50%) scale(1)';
                                 this.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.4)';
                             }, 300);
-                        });
+                        };
 
-                        // Hover effect
+                        // Mouse events
+                        dot.addEventListener('click', handleNotePlay);
                         dot.addEventListener('mouseenter', function() {
                             this.style.transform = 'translate(-50%, -50%) scale(1.2)';
                         });
                         dot.addEventListener('mouseleave', function() {
                             this.style.transform = 'translate(-50%, -50%) scale(1)';
+                        });
+
+                        // Touch events for iPad/mobile
+                        dot.addEventListener('touchstart', function(e) {
+                            e.preventDefault(); // Prevent scrolling and mouse events
+                            handleNotePlay.call(this);
                         });
 
                         stringDiv.appendChild(dot);
