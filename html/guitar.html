@@ -111,6 +111,15 @@
                 </div>
 
                 <div class="control-group">
+                    <h3>Chord Position</h3>
+                    <div class="octave-controls">
+                        <button onclick="changeChordPosition(-1)">◀</button>
+                        <span id="chord-position-display">Position 1</span>
+                        <button onclick="changeChordPosition(1)">▶</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
                     <h3>Actions</h3>
                     <div class="action-buttons">
                         <button onclick="playChordOrScale()">▶ Play Chord</button>
@@ -189,7 +198,7 @@
                     <h3>Scale Position</h3>
                     <div class="octave-controls">
                         <button onclick="changeScalePosition(-1)">◀</button>
-                        <span id="scale-position-display">Low E String</span>
+                        <input type="number" id="scale-position-input" min="0" max="17" value="0" style="width: 60px; text-align: center; background: #2d2d2d; border: 1px solid #555; border-radius: 4px; color: #f97316; font-size: 14px; font-weight: bold; padding: 5px; -moz-appearance: textfield;">
                         <button onclick="changeScalePosition(1)">▶</button>
                     </div>
                 </div>

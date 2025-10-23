@@ -280,6 +280,11 @@
 
                             // Track note for chord detection in Free Play tab
                             if (containerId === 'piano-keyboard-play') {
+                                // Clear any existing timeout for this note
+                                if (noteTimeouts.has(note)) {
+                                    clearTimeout(noteTimeouts.get(note));
+                                    noteTimeouts.delete(note);
+                                }
                                 currentlyPlayingNotes.add(note);
                                 updateChordDisplay();
                             }
@@ -288,10 +293,21 @@
                         const handleNoteEnd = () => {
                             key.classList.remove('active');
 
-                            // Remove note from chord detection in Free Play tab
+                            // Remove note from chord detection after delay in Free Play tab
                             if (containerId === 'piano-keyboard-play') {
-                                currentlyPlayingNotes.delete(note);
-                                updateChordDisplay();
+                                // Clear any existing timeout for this note
+                                if (noteTimeouts.has(note)) {
+                                    clearTimeout(noteTimeouts.get(note));
+                                }
+
+                                // Set timeout to remove note after 2 seconds
+                                const timeout = setTimeout(() => {
+                                    currentlyPlayingNotes.delete(note);
+                                    noteTimeouts.delete(note);
+                                    updateChordDisplay();
+                                }, 2000);
+
+                                noteTimeouts.set(note, timeout);
                             }
                         };
 
@@ -339,6 +355,11 @@
 
                     // Track note for chord detection in Free Play tab
                     if (containerId === 'piano-keyboard-play') {
+                        // Clear any existing timeout for C
+                        if (noteTimeouts.has('C')) {
+                            clearTimeout(noteTimeouts.get('C'));
+                            noteTimeouts.delete('C');
+                        }
                         currentlyPlayingNotes.add('C');
                         updateChordDisplay();
                     }
@@ -347,10 +368,21 @@
                 const handleExtraNoteEnd = () => {
                     extraKey.classList.remove('active');
 
-                    // Remove note from chord detection in Free Play tab
+                    // Remove note from chord detection after delay in Free Play tab
                     if (containerId === 'piano-keyboard-play') {
-                        currentlyPlayingNotes.delete('C');
-                        updateChordDisplay();
+                        // Clear any existing timeout for C
+                        if (noteTimeouts.has('C')) {
+                            clearTimeout(noteTimeouts.get('C'));
+                        }
+
+                        // Set timeout to remove note after 2 seconds
+                        const timeout = setTimeout(() => {
+                            currentlyPlayingNotes.delete('C');
+                            noteTimeouts.delete('C');
+                            updateChordDisplay();
+                        }, 2000);
+
+                        noteTimeouts.set('C', timeout);
                     }
                 };
 
@@ -941,6 +973,8 @@
 
         // Track currently playing notes
         let currentlyPlayingNotes = new Set();
+        // Track note timeouts for delayed removal
+        let noteTimeouts = new Map();
 
         // Detect chord from currently playing notes
         function detectChord(notesSet) {
@@ -1048,6 +1082,11 @@
                 playNote(note, currentOctavePlay - 1 + octaveOffset);
 
                 // Track the note for chord detection
+                // Clear any existing timeout for this note
+                if (noteTimeouts.has(note)) {
+                    clearTimeout(noteTimeouts.get(note));
+                    noteTimeouts.delete(note);
+                }
                 currentlyPlayingNotes.add(note);
                 updateChordDisplay();
 
@@ -1063,9 +1102,20 @@
             if (note) {
                 pressedKeys.delete(e.key);
 
-                // Remove note from chord detection
-                currentlyPlayingNotes.delete(note);
-                updateChordDisplay();
+                // Remove note from chord detection after delay
+                // Clear any existing timeout for this note
+                if (noteTimeouts.has(note)) {
+                    clearTimeout(noteTimeouts.get(note));
+                }
+
+                // Set timeout to remove note after 2 seconds
+                const timeout = setTimeout(() => {
+                    currentlyPlayingNotes.delete(note);
+                    noteTimeouts.delete(note);
+                    updateChordDisplay();
+                }, 2000);
+
+                noteTimeouts.set(note, timeout);
 
                 // Remove visual feedback from the specific octave on all keyboards
                 const octaveOffset = getOctaveOffset(e.key);
@@ -1103,6 +1153,11 @@
                     playNote(noteName, octave, 2); // Longer duration for MIDI notes
 
                     // Track note for chord detection
+                    // Clear any existing timeout for this note
+                    if (noteTimeouts.has(noteName)) {
+                        clearTimeout(noteTimeouts.get(noteName));
+                        noteTimeouts.delete(noteName);
+                    }
                     currentlyPlayingNotes.add(noteName);
                     updateChordDisplay();
 
@@ -1126,9 +1181,20 @@
                         activeMidiNotes.delete(note);
                     }
 
-                    // Remove from chord detection
-                    currentlyPlayingNotes.delete(noteName);
-                    updateChordDisplay();
+                    // Remove from chord detection after delay
+                    // Clear any existing timeout for this note
+                    if (noteTimeouts.has(noteName)) {
+                        clearTimeout(noteTimeouts.get(noteName));
+                    }
+
+                    // Set timeout to remove note after 2 seconds
+                    const timeout = setTimeout(() => {
+                        currentlyPlayingNotes.delete(noteName);
+                        noteTimeouts.delete(noteName);
+                        updateChordDisplay();
+                    }, 2000);
+
+                    noteTimeouts.set(noteName, timeout);
                 }
             }
         }

@@ -479,6 +479,60 @@
             }
         }
 
+        // Copy pattern to editor
+        function copyPatternToEditor(pattern, copyButton) {
+            // Copy pattern data to currentEditorPattern
+            const instruments = ['kick', 'snare', 'clap', 'hihat', 'cymbal', 'tom', 'rim', 'cowbell', 'shaker', 'perc'];
+            instruments.forEach(inst => {
+                if (pattern[inst]) {
+                    currentEditorPattern[inst] = [...pattern[inst]];
+                } else {
+                    currentEditorPattern[inst] = [];
+                }
+            });
+
+            // Update the editor name
+            currentEditorPattern.name = pattern.name + ' (Copy)';
+
+            // Update the pattern name input field
+            const patternNameInput = document.getElementById('pattern-name');
+            if (patternNameInput) {
+                patternNameInput.value = currentEditorPattern.name;
+            }
+
+            // Regenerate the editor grid to show the copied pattern
+            const editorContainer = document.getElementById('editor-pattern');
+            editorContainer.innerHTML = '';
+            editorContainer.appendChild(createEditablePattern());
+
+            // Open the editor section if it's closed
+            const editorSection = document.getElementById('editor-section');
+            if (editorSection && !editorSection.classList.contains('visible')) {
+                editorSection.classList.add('visible');
+            }
+
+            // Show a brief confirmation message
+            const originalText = copyButton.textContent;
+            const originalBackground = copyButton.style.background;
+            copyButton.textContent = '✓ Copied!';
+            copyButton.style.background = '#10b981';
+            copyButton.style.border = '1px solid #059669';
+
+            // Scroll to the editor section after a short delay
+            setTimeout(() => {
+                if (editorSection) {
+                    editorSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
+
+            // Reset button after confirmation
+            setTimeout(() => {
+                copyButton.textContent = originalText;
+                copyButton.style.background = originalBackground;
+                copyButton.style.border = '1px solid rgba(167, 139, 250, 0.5)';
+            }, 1500);
+        }
+
         function createPatternElement(pattern, index) {
             const container = document.createElement('div');
             container.className = 'pattern-container';
@@ -490,13 +544,33 @@
             title.className = 'pattern-title';
             title.textContent = pattern.name;
 
+            const buttonGroup = document.createElement('div');
+            buttonGroup.style.display = 'flex';
+            buttonGroup.style.gap = '5px';
+
             const playButton = document.createElement('button');
             playButton.className = 'play-button';
             playButton.textContent = '▶ Play';
             playButton.dataset.patternId = index;
 
+            const copyButton = document.createElement('button');
+            copyButton.className = 'play-button copy-button'; // Add copy-button class to distinguish it
+            copyButton.textContent = '📋 Copy';
+            copyButton.dataset.isCopyButton = 'true'; // Mark as copy button
+            copyButton.style.background = 'rgba(139, 92, 246, 0.8)';
+            copyButton.style.fontSize = '12px';
+            copyButton.style.padding = '8px 12px';
+            copyButton.style.border = '1px solid rgba(167, 139, 250, 0.5)';
+            copyButton.addEventListener('click', function(e) {
+                e.stopPropagation();
+                copyPatternToEditor(pattern, e.target);
+            });
+
+            buttonGroup.appendChild(playButton);
+            buttonGroup.appendChild(copyButton);
+
             header.appendChild(title);
-            header.appendChild(playButton);
+            header.appendChild(buttonGroup);
 
             const grid = document.createElement('div');
             grid.className = 'midi-grid';
@@ -619,6 +693,11 @@
                         cell.appendChild(marker);
                     }
 
+                    // Check if this cell should be active based on currentEditorPattern
+                    if (currentEditorPattern[inst] && currentEditorPattern[inst].includes(i)) {
+                        cell.classList.add('active');
+                    }
+
                     // Add click/touch handler for editing
                     const handleCellToggle = function() {
                         const step = parseInt(this.dataset.step);
@@ -700,9 +779,12 @@
                 clearInterval(currentlyPlaying);
                 currentlyPlaying = null;
 
+                // Reset only actual play buttons, not copy buttons
                 document.querySelectorAll('.play-button').forEach(btn => {
-                    btn.textContent = '▶ Play';
-                    btn.classList.remove('playing');
+                    if (!btn.dataset.isCopyButton) {
+                        btn.textContent = '▶ Play';
+                        btn.classList.remove('playing');
+                    }
                 });
 
                 document.querySelectorAll('.grid-cell').forEach(cell => {
@@ -788,9 +870,11 @@
                 patternsContainer.appendChild(noResults);
             }
 
-            // Re-attach event listeners
+            // Re-attach event listeners (excluding copy buttons)
             document.querySelectorAll('.play-button:not([onclick])').forEach(button => {
-                if (!button.textContent.includes('Delete') && button.dataset.patternId) {
+                if (!button.textContent.includes('Delete') &&
+                    !button.dataset.isCopyButton &&
+                    button.dataset.patternId) {
                     button.addEventListener('click', function() {
                         const patternId = parseInt(this.dataset.patternId);
                         if (this.classList.contains('playing')) {
