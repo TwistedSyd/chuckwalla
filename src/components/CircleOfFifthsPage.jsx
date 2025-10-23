@@ -21,13 +21,40 @@ const notes = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A�
 const majorScale = [0, 2, 4, 5, 7, 9, 11];
 const minorScale = [0, 2, 3, 5, 7, 8, 10];
 
+const chordShapes = {
+  major: { intervals: [0, 4, 7], labels: ['root', 'major 3rd', 'perfect 5th'] },
+  minor: { intervals: [0, 3, 7], labels: ['root', 'minor 3rd', 'perfect 5th'] },
+  dom7: { intervals: [0, 4, 7, 10], labels: ['root', 'major 3rd', 'perfect 5th', 'minor 7th'] },
+  maj7: { intervals: [0, 4, 7, 11], labels: ['root', 'major 3rd', 'perfect 5th', 'major 7th'] }
+};
+
+// Get the chromatic note index (0-11) for any note name
+const getNoteIndex = (noteName) => {
+  const cleaned = noteName.replace(/♯/g, '#').replace(/♭/g, 'b');
+  const noteMap = {
+    'C': 0, 'B#': 0,
+    'C#': 1, 'Db': 1,
+    'D': 2,
+    'D#': 3, 'Eb': 3,
+    'E': 4, 'Fb': 4,
+    'F': 5, 'E#': 5,
+    'F#': 6, 'Gb': 6,
+    'G': 7,
+    'G#': 8, 'Ab': 8,
+    'A': 9,
+    'A#': 10, 'Bb': 10,
+    'B': 11, 'Cb': 11
+  };
+  return noteMap[cleaned] !== undefined ? noteMap[cleaned] : -1;
+};
+
 function CircleOfFifthsPage() {
   const [currentTab, setCurrentTab] = useState(() => {
     return localStorage.getItem('circleCurrentTab') || 'circle';
   });
   const [selectedKey, setSelectedKey] = useState(null);
   const [isMajor, setIsMajor] = useState(true);
-  const [chordShape, setChordShape] = useState('major');
+  const [chordShape, setChordShape] = useState(null);
 
   // Save current tab to localStorage
   useEffect(() => {
@@ -46,7 +73,7 @@ function CircleOfFifthsPage() {
 
   const getScaleNotes = (root, isMajorScale = true) => {
     const scale = isMajorScale ? majorScale : minorScale;
-    const rootIndex = notes.indexOf(root.replace(/♭/g, '♯')); // Normalize flats to sharps for lookup
+    const rootIndex = getNoteIndex(root); // Use getNoteIndex to handle enharmonic equivalents
     if (rootIndex === -1) return [];
 
     return scale.map((interval, degree) => {
@@ -55,9 +82,106 @@ function CircleOfFifthsPage() {
     });
   };
 
+  const toRomanNumeral = (num) => {
+    const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+    return romanNumerals[num - 1] || '';
+  };
+
+  const getRomanNumerals = () => {
+    if (!selectedKey) return [];
+
+    const centerX = 300;
+    const centerY = 300;
+    const numeralRadius = 310;
+    const segmentAngle = 30;
+
+    const keyName = isMajor ? selectedKey.major : selectedKey.minor;
+    const rootNote = keyName.split('/')[0].replace(/m$/, ''); // Take first name for enharmonic keys, then remove 'm'
+    const scale = isMajor ? majorScale : minorScale;
+    const rootIndex = getNoteIndex(rootNote);
+
+    if (rootIndex === -1) return [];
+
+    const numerals = [];
+
+    circleKeys.forEach((key, circlePosition) => {
+      const circleNote = key.major.split('/')[0]; // Take first name for enharmonic keys
+      const circleNoteIndex = getNoteIndex(circleNote);
+
+      if (circleNoteIndex === -1) return;
+
+      const interval = (circleNoteIndex - rootIndex + 12) % 12;
+      const scaleIndex = scale.indexOf(interval);
+
+      if (scaleIndex !== -1) {
+        const degree = scaleIndex + 1;
+        const angle = (circlePosition * segmentAngle - 105 + segmentAngle / 2) * Math.PI / 180;
+        const x = centerX + numeralRadius * Math.cos(angle);
+        const y = centerY + numeralRadius * Math.sin(angle);
+
+        numerals.push({ x, y, text: toRomanNumeral(degree) });
+      }
+    });
+
+    return numerals;
+  };
+
+  const getChordShapePath = () => {
+    if (!selectedKey || !chordShape) return null;
+
+    const centerX = 300;
+    const centerY = 300;
+    const lineRadius = 250;
+    const segmentAngle = 30;
+
+    const keyName = isMajor ? selectedKey.major : selectedKey.minor;
+    const rootNote = keyName.split('/')[0].replace(/m$/, ''); // Take first name for enharmonic keys, then remove 'm'
+    const rootIndex = getNoteIndex(rootNote);
+
+    if (rootIndex === -1) return null;
+
+    const chord = chordShapes[chordShape];
+    const chordPositions = [];
+
+    chord.intervals.forEach((interval, index) => {
+      const noteIndex = (rootIndex + interval) % 12;
+
+      circleKeys.forEach((key, circlePosition) => {
+        const circleNote = key.major.split('/')[0]; // Take first name for enharmonic keys
+        const circleNoteIndex = getNoteIndex(circleNote);
+
+        if (circleNoteIndex === noteIndex) {
+          const angle = (circlePosition * segmentAngle - 105 + segmentAngle / 2) * Math.PI / 180;
+          const x = centerX + lineRadius * Math.cos(angle);
+          const y = centerY + lineRadius * Math.sin(angle);
+          chordPositions.push({ x, y, label: chord.labels[index] });
+        }
+      });
+    });
+
+    if (chordPositions.length >= 3) {
+      const pathData = chordPositions.map((pos, i) =>
+        `${i === 0 ? 'M' : 'L'} ${pos.x} ${pos.y}`
+      ).join(' ') + ' Z';
+
+      return { pathData, positions: chordPositions };
+    }
+
+    return null;
+  };
+
   const handleKeyClick = (key, major) => {
     setSelectedKey(key);
     setIsMajor(major);
+    setChordShape(null); // Clear chord shape when changing keys
+  };
+
+  const handleChordButtonClick = (shape) => {
+    if (chordShape === shape) {
+      setChordShape(null); // Toggle off if clicking same button
+    } else {
+      setChordShape(shape); // Show new shape
+    }
   };
 
   const renderCircle = () => {
@@ -68,8 +192,11 @@ function CircleOfFifthsPage() {
     const innerRadius = 100;
     const segmentAngle = 30; // 360 / 12
 
+    const romanNumerals = getRomanNumerals();
+    const chordShapeData = getChordShapePath();
+
     return (
-      <svg className="circle-of-fifths" viewBox="-20 0 640 600">
+      <svg className="circle-of-fifths" viewBox="-20 -20 640 640">
         {circleKeys.map((key, index) => {
           const angle = index * segmentAngle - 105; // Center C at top
           const startAngle = angle * Math.PI / 180;
@@ -187,6 +314,46 @@ function CircleOfFifthsPage() {
             </g>
           );
         })}
+
+        {/* Chord shape visualization */}
+        {chordShapeData && (
+          <>
+            <path
+              d={chordShapeData.pathData}
+              fill="rgba(255, 165, 0, 0.15)"
+              stroke="#FFA500"
+              strokeWidth="3"
+              style={{ pointerEvents: 'none' }}
+            />
+            {chordShapeData.positions.map((pos, i) => (
+              <circle
+                key={i}
+                cx={pos.x}
+                cy={pos.y}
+                r="6"
+                fill="#FFA500"
+                style={{ pointerEvents: 'none' }}
+              />
+            ))}
+          </>
+        )}
+
+        {/* Roman numerals for scale degrees */}
+        {romanNumerals.map((numeral, i) => (
+          <text
+            key={i}
+            x={numeral.x}
+            y={numeral.y}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill="#fff"
+            fontSize="16"
+            fontWeight="bold"
+            style={{ pointerEvents: 'none', userSelect: 'none' }}
+          >
+            {numeral.text}
+          </text>
+        ))}
       </svg>
     );
   };
@@ -198,7 +365,8 @@ function CircleOfFifthsPage() {
 
     const keyName = isMajor ? selectedKey.major : selectedKey.minor;
     const relativeKey = isMajor ? selectedKey.minor : selectedKey.major;
-    const scaleNotes = getScaleNotes(keyName.replace(/♭/g, '♯').replace(/m$/, ''), isMajor);
+    const rootNote = keyName.split('/')[0].replace(/m$/, ''); // Take first name for enharmonic keys, then remove 'm'
+    const scaleNotes = getScaleNotes(rootNote, isMajor);
 
     return (
       <div id="key-details">
@@ -212,13 +380,13 @@ function CircleOfFifthsPage() {
             <label>Key Signature</label>
             <value>{getKeySignature(selectedKey)}</value>
           </div>
-          <div className="info-item" style={{ padding: '20px' }}>
-            <label style={{ marginBottom: '15px', display: 'block' }}>Scale Notes & Degrees</label>
-            <div style={{ display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: '10px' }}>
+          <div className="info-item" style={{ padding: '15px' }}>
+            <label style={{ marginBottom: '10px', display: 'block' }}>Scale Notes & Degrees</label>
+            <div style={{ display: 'flex', justifyContent: 'space-around', gap: '6px' }}>
               {scaleNotes.map((item, i) => (
-                <div key={i} style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#10b981' }}>{item.note}</div>
-                  <div style={{ fontSize: '10px', color: '#888', marginTop: '2px' }}>{item.degree}</div>
+                <div key={i} style={{ textAlign: 'center', flex: '1 1 0', minWidth: 0 }}>
+                  <div style={{ color: '#00d9ff', fontWeight: 'bold', fontSize: '12px', marginBottom: '3px' }}>{item.degree}</div>
+                  <div style={{ color: '#fff', fontSize: '16px', fontWeight: 'bold' }}>{item.note}</div>
                 </div>
               ))}
             </div>
@@ -256,35 +424,57 @@ function CircleOfFifthsPage() {
             </div>
 
             <div className="info-panel">
-              <div className="chord-shape-buttons" style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '10px', color: '#888', fontSize: '12px' }}>CHORD SHAPES</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <button
-                    className={`chord-shape-btn ${chordShape === 'major' ? 'active' : ''}`}
-                    onClick={() => setChordShape('major')}
-                  >
-                    Major
-                  </button>
-                  <button
-                    className={`chord-shape-btn ${chordShape === 'minor' ? 'active' : ''}`}
-                    onClick={() => setChordShape('minor')}
-                  >
-                    Minor
-                  </button>
-                  <button
-                    className={`chord-shape-btn ${chordShape === 'dom7' ? 'active' : ''}`}
-                    onClick={() => setChordShape('dom7')}
-                  >
-                    Dom 7th
-                  </button>
-                  <button
-                    className={`chord-shape-btn ${chordShape === 'maj7' ? 'active' : ''}`}
-                    onClick={() => setChordShape('maj7')}
-                  >
-                    Maj 7th
-                  </button>
+              {selectedKey && (
+                <div className="chord-shape-buttons" style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '10px', color: '#888', fontSize: '12px' }}>CHORD SHAPES</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <button
+                      className={`chord-shape-btn ${chordShape === 'major' ? 'active' : ''}`}
+                      onClick={() => handleChordButtonClick('major')}
+                      style={{
+                        background: chordShape === 'major' ? '#FFA500' : '#3a3a3a',
+                        borderColor: chordShape === 'major' ? '#FFA500' : '#555',
+                        transition: 'all 0.3s'
+                      }}
+                    >
+                      Major
+                    </button>
+                    <button
+                      className={`chord-shape-btn ${chordShape === 'minor' ? 'active' : ''}`}
+                      onClick={() => handleChordButtonClick('minor')}
+                      style={{
+                        background: chordShape === 'minor' ? '#FFA500' : '#3a3a3a',
+                        borderColor: chordShape === 'minor' ? '#FFA500' : '#555',
+                        transition: 'all 0.3s'
+                      }}
+                    >
+                      Minor
+                    </button>
+                    <button
+                      className={`chord-shape-btn ${chordShape === 'dom7' ? 'active' : ''}`}
+                      onClick={() => handleChordButtonClick('dom7')}
+                      style={{
+                        background: chordShape === 'dom7' ? '#FFA500' : '#3a3a3a',
+                        borderColor: chordShape === 'dom7' ? '#FFA500' : '#555',
+                        transition: 'all 0.3s'
+                      }}
+                    >
+                      Dom 7th
+                    </button>
+                    <button
+                      className={`chord-shape-btn ${chordShape === 'maj7' ? 'active' : ''}`}
+                      onClick={() => handleChordButtonClick('maj7')}
+                      style={{
+                        background: chordShape === 'maj7' ? '#FFA500' : '#3a3a3a',
+                        borderColor: chordShape === 'maj7' ? '#FFA500' : '#555',
+                        transition: 'all 0.3s'
+                      }}
+                    >
+                      Maj 7th
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
               {renderKeyInfo()}
             </div>
           </div>

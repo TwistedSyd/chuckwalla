@@ -33,20 +33,22 @@
     margin: 0 auto 40px;
 }
 
-.content-wrapper {
+.circle-of-fifths-page .content-wrapper {
     display: flex;
-    gap: 80px;
-    align-items: flex-start;
+    gap: 60px;
+    align-items: center;
     justify-content: center;
     max-width: 1200px;
     margin: 0 auto;
+    padding: 0 20px;
 }
 
 .left-content {
-    flex: 0 0 auto;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    width: 650px;
+    max-width: 550px;
+    min-width: 500px;
 }
 
 .circle-container {
@@ -56,12 +58,13 @@
     margin-top: -40px;
     margin-bottom: 40px;
     position: relative;
+    width: 100%;
 }
 
 .circle-of-fifths {
     position: relative;
-    width: 600px;
-    height: 600px;
+    width: 550px;
+    height: 550px;
 }
 
 .key-segment {
@@ -133,18 +136,18 @@
     color: #aaa;
 }
 
-.info-panel {
+.circle-of-fifths-page .info-panel {
     background: #3a3a3a;
     border: 2px solid #555;
     border-radius: 8px;
-    padding: 25px;
-    width: 520px;
-    max-height: 500px;
+    padding: 20px;
+    width: 350px;
+    max-width: 350px;
+    min-width: 320px;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    flex: 0 0 auto;
-    overflow-y: auto;
+    flex: 1;
 }
 
 .placeholder-text {
@@ -154,15 +157,7 @@
     font-size: 14px;
 }
 
-#key-details {
-    display: none;
-}
-
-#chord-buttons {
-    display: none;
-}
-
-.info-panel h2 {
+.circle-of-fifths-page .info-panel h2 {
     color: #00d9ff;
     margin-bottom: 15px;
     font-size: 24px;
