@@ -1,71 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Chuckwalla</title>
-    <link rel="stylesheet" href="css/index.css">
-</head>
-<body>
-    <!-- Navigation Icons -->
-    <div class="nav-icons">
-        <a href="index.html" class="nav-icon-button active" title="Home">🏠</a>
-        <a href="html/drums.html" class="nav-icon-button" title="Drum Machine">🥁</a>
-        <a href="html/piano.html" class="nav-icon-button" title="Piano">🎹</a>
-        <a href="html/guitar.html" class="nav-icon-button" title="Guitar">🎸</a>
-        <a href="html/circle-of-fifths.html" class="nav-icon-button" title="Circle of Fifths">🌀</a>
-    </div>
-
-    <div class="container">
-        <h1>
-            <span class="chuckwalla-graphic">🦎</span>
-            Chuckwalla
-        </h1>
-        <p class="subtitle">Create amazing beats and melodies in your browser</p>
-
-        <div class="instruments-grid">
-            <a href="html/drums.html" class="instrument-card drums">
-                <div class="instrument-icon">🥁</div>
-                <div class="instrument-name">Drum Machine</div>
-                <div class="instrument-description">
-                    Create and customize drum patterns with our interactive MIDI grid.
-                    Features 20+ preset patterns including Rock, EDM, Hip Hop, and more.
-                </div>
-            </a>
-
-            <a href="html/piano.html" class="instrument-card piano">
-                <div class="instrument-icon">🎹</div>
-                <div class="instrument-name">Piano</div>
-                <div class="instrument-description">
-                    Play melodies, explore chords & scales with interactive visualization.
-                    Includes 14 chord types, 14 scales, and music theory learning.
-                </div>
-            </a>
-
-            <a href="html/guitar.html" class="instrument-card guitar">
-                <div class="instrument-icon">🎸</div>
-                <div class="instrument-name">Guitar</div>
-                <div class="instrument-description">
-                    Interactive fretboard with chord shapes and scale patterns.
-                    Includes multiple tunings, 14 chord types, 14 scales, and music theory learning.
-                </div>
-            </a>
-
-            <a href="html/circle-of-fifths.html" class="instrument-card circle-of-fifths">
-                <div class="instrument-icon">🌀</div>
-                <div class="instrument-name">Circle of Fifths</div>
-                <div class="instrument-description">
-                    Explore music theory with an interactive Circle of Fifths.
-                    Visualize key signatures, relative major/minor keys, and chord relationships.
-                </div>
-            </a>
-        </div>
-
-        <div class="footer">
-            Made with Web Audio API | No installation required
-        </div>
-    </div>
-
-    <script src="js/index.js"></script>
-</body>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

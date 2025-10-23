@@ -1,0 +1,146 @@
+.piano-keyboard {
+  position: relative;
+  display: flex;
+  margin: 0 auto;
+  width: fit-content;
+}
+
+.key {
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.1s;
+  touch-action: none;
+}
+
+.white-key {
+  width: 50px;
+  height: 200px;
+  background: linear-gradient(to bottom, #ffffff 0%, #f0f0f0 100%);
+  border: 2px solid #222;
+  border-radius: 0 0 5px 5px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.white-key:hover {
+  background: linear-gradient(to bottom, #f5f5f5 0%, #e8e8e8 100%);
+}
+
+.white-key.highlighted {
+  background: linear-gradient(to bottom, #8b5cf6 0%, #7c3aed 100%);
+  box-shadow: 0 0 5px rgba(139, 92, 246, 0.3);
+}
+
+.white-key.root {
+  background: linear-gradient(to bottom, #ec4899 0%, #db2777 100%);
+  box-shadow: 0 0 5px rgba(236, 72, 153, 0.3);
+}
+
+.white-key:active,
+.white-key.active {
+  background: linear-gradient(to bottom, #a78bfa 0%, #9333ea 100%) !important;
+  transform: translateY(2px);
+  box-shadow: 0 0 20px rgba(167, 139, 250, 0.7), 0 2px 4px rgba(0, 0, 0, 0.5) !important;
+}
+
+.white-key.root:active,
+.white-key.root.active {
+  background: linear-gradient(to bottom, #f9a8d4 0%, #f472b6 100%) !important;
+  transform: translateY(2px);
+  box-shadow: 0 0 20px rgba(249, 168, 212, 0.7), 0 2px 4px rgba(0, 0, 0, 0.5) !important;
+}
+
+.black-key {
+  width: 35px;
+  height: 120px;
+  background: linear-gradient(to bottom, #2a2a2a 0%, #000000 100%);
+  border: 2px solid #000;
+  border-radius: 0 0 3px 3px;
+  position: absolute;
+  z-index: 2;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+  margin-left: -17.5px;
+}
+
+.black-key:hover {
+  background: linear-gradient(to bottom, #3a3a3a 0%, #1a1a1a 100%);
+}
+
+.black-key.highlighted {
+  background: linear-gradient(to bottom, #8b5cf6 0%, #7c3aed 100%);
+  box-shadow: 0 0 5px rgba(139, 92, 246, 0.3);
+}
+
+.black-key.root {
+  background: linear-gradient(to bottom, #ec4899 0%, #db2777 100%);
+  box-shadow: 0 0 5px rgba(236, 72, 153, 0.3);
+}
+
+.black-key:active,
+.black-key.active {
+  background: linear-gradient(to bottom, #a78bfa 0%, #9333ea 100%) !important;
+  transform: translateY(2px);
+  box-shadow: 0 0 20px rgba(167, 139, 250, 0.7), 0 2px 4px rgba(0, 0, 0, 0.7) !important;
+}
+
+.black-key.root:active,
+.black-key.root.active {
+  background: linear-gradient(to bottom, #f9a8d4 0%, #f472b6 100%) !important;
+  transform: translateY(2px);
+  box-shadow: 0 0 20px rgba(249, 168, 212, 0.7), 0 2px 4px rgba(0, 0, 0, 0.7) !important;
+}
+
+.key-label {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #666;
+  text-align: right;
+  line-height: 1;
+}
+
+.black-key .key-label {
+  color: #aaa;
+  bottom: 10px;
+  right: 8px;
+  font-size: 9px;
+}
+
+.interval-label {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: bold;
+  color: #00d9ff;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  z-index: 3;
+}
+
+.keyboard-key-label {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 217, 255, 0.9);
+  color: #1a1a1a;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  z-index: 3;
+}
+
+.black-key .keyboard-key-label {
+  background: rgba(255, 255, 255, 0.95);
+  color: #000;
+  top: 8px;
+}

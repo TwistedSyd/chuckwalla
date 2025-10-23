@@ -1,0 +1,693 @@
+import { useState, useEffect, useRef } from 'react';
+import DrumRoadmap from './DrumRoadmap';
+import './DrumsPage.css';
+
+const STEPS = 16;
+
+// Drum patterns from the original
+const patterns = [
+  { name: "1. Basic Rock Beat", kick: [0, 4, 8, 12], snare: [4, 12], clap: [], hihat: [0, 2, 4, 6, 8, 10, 12, 14], cymbal: [] },
+  { name: "2. Four on the Floor", kick: [0, 4, 8, 12], snare: [4, 12], clap: [], hihat: [2, 6, 10, 14], cymbal: [0] },
+  { name: "3. Hip Hop Basic", kick: [0, 6, 10], snare: [4, 12], clap: [4, 12], hihat: [0, 2, 4, 6, 8, 10, 12, 14], cymbal: [] },
+  { name: "4. Disco Beat", kick: [0, 4, 8, 12], snare: [], clap: [4, 12], hihat: [2, 6, 10, 14], cymbal: [0, 8] },
+  { name: "5. Boom Bap", kick: [0, 10], snare: [4, 12], clap: [4, 12], hihat: [0, 2, 4, 6, 8, 10, 12, 14], cymbal: [] },
+  { name: "6. House Basic", kick: [0, 4, 8, 12], snare: [4, 12], clap: [4, 12], hihat: [0, 2, 4, 6, 8, 10, 12, 14], cymbal: [0] },
+  { name: "7. Trap Pattern", kick: [0, 3, 6, 10, 13], snare: [4, 12], clap: [], hihat: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], cymbal: [] },
+  { name: "8. Reggae One Drop", kick: [4, 12], snare: [4, 12], clap: [], hihat: [2, 6, 10, 14], cymbal: [0, 8] },
+  { name: "9. Motown Beat", kick: [0, 8], snare: [4, 12], clap: [4, 12], hihat: [0, 2, 4, 6, 8, 10, 12, 14], cymbal: [] },
+  { name: "10. Breakbeat", kick: [0, 5, 10], snare: [4, 13], clap: [], hihat: [0, 2, 4, 6, 8, 10, 12, 14], cymbal: [0] }
+];
+
+const edmPatterns = [
+  { name: "11. Classic House 4x4", kick: [0, 4, 8, 12], snare: [], clap: [4, 12], hihat: [0, 2, 4, 6, 8, 10, 12, 14], cymbal: [0, 8], shaker: [2, 6, 10, 14] },
+  { name: "12. Progressive House", kick: [0, 4, 8, 12], snare: [4, 12], clap: [4, 12], hihat: [2, 6, 10, 14], cymbal: [0], perc: [1, 3, 5, 7, 9, 11, 13, 15] },
+  { name: "13. Trance Driving", kick: [0, 4, 8, 12], snare: [4, 12], clap: [], hihat: [0, 2, 4, 6, 8, 10, 12, 14], cymbal: [0, 8], rim: [2, 6, 10, 14] },
+  { name: "14. Big Room EDM", kick: [0, 4, 8, 12], snare: [4, 12], clap: [4, 12], hihat: [2, 6, 10, 14], cymbal: [0, 8], tom: [3, 7, 11, 15] },
+  { name: "15. Dubstep Halftime", kick: [0, 8], snare: [4, 12], clap: [4, 12], hihat: [0, 2, 4, 6, 8, 10, 12, 14], rim: [2, 6, 10, 14], perc: [1, 5, 9, 13] },
+  { name: "16. Future Bass", kick: [0, 6, 12], snare: [4, 12], clap: [4, 12], hihat: [0, 3, 6, 9, 12, 15], cymbal: [0, 8], shaker: [0, 3, 6, 9, 12, 15] },
+  { name: "17. Tech House Groove", kick: [0, 4, 8, 12], snare: [], clap: [4, 12], hihat: [0, 2, 4, 6, 8, 10, 12, 14], rim: [1, 3, 5, 7, 9, 11, 13, 15], perc: [2, 6, 10, 14] },
+  { name: "18. Deep House", kick: [0, 4, 8, 12], snare: [], clap: [4, 12], hihat: [2, 6, 10, 14], cymbal: [0], shaker: [0, 2, 4, 6, 8, 10, 12, 14], rim: [3, 11] },
+  { name: "19. Hardstyle Kick Roll", kick: [0, 2, 4, 6, 8, 10, 12, 14], snare: [4, 12], clap: [4, 12], hihat: [2, 6, 10, 14], cymbal: [0, 8], rim: [1, 5, 9, 13] },
+  { name: "20. Melodic Techno", kick: [0, 4, 8, 12], snare: [6, 14], clap: [4, 12], hihat: [0, 2, 4, 6, 8, 10, 12, 14], rim: [1, 5, 9, 13], perc: [3, 7, 11, 15], shaker: [2, 10] }
+];
+
+const instruments = ['kick', 'snare', 'clap', 'hihat', 'cymbal', 'tom', 'rim', 'shaker', 'perc'];
+
+function DrumsPage() {
+  const [currentTab, setCurrentTab] = useState(() => {
+    return localStorage.getItem('drumsCurrentTab') || 'patterns';
+  });
+  const [tempo, setTempo] = useState(120);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [editorVisible, setEditorVisible] = useState(false);
+  const [editorPattern, setEditorPattern] = useState(() => {
+    const initial = {};
+    instruments.forEach(inst => { initial[inst] = []; });
+    return initial;
+  });
+  const [editorName, setEditorName] = useState('My Custom Beat');
+  const [userPatterns, setUserPatterns] = useState([]);
+  const [playingPattern, setPlayingPattern] = useState(null);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [tapTimes, setTapTimes] = useState([]);
+
+  const audioContextRef = useRef(null);
+  const intervalRef = useRef(null);
+
+  // Initialize audio context
+  const initAudioContext = () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioContextRef.current;
+  };
+
+  // Audio synthesis functions
+  const createKickDrum = () => {
+    const ctx = audioContextRef.current;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.1);
+    osc.frequency.exponentialRampToValueAtTime(20, ctx.currentTime + 0.3);
+
+    filter.type = 'lowpass';
+    filter.frequency.value = 200;
+    filter.Q.value = 1;
+
+    gain.gain.setValueAtTime(1.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.3);
+  };
+
+  const createSnare = () => {
+    const ctx = audioContextRef.current;
+    // White noise
+    const noise = ctx.createBufferSource();
+    const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < output.length; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+    noise.buffer = noiseBuffer;
+
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'highpass';
+    noiseFilter.frequency.value = 1000;
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.8, ctx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+
+    // Tone component
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(180, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.1);
+    oscGain.gain.setValueAtTime(0.5, ctx.currentTime);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+
+    noise.start(ctx.currentTime);
+    osc.start(ctx.currentTime);
+    noise.stop(ctx.currentTime + 0.15);
+    osc.stop(ctx.currentTime + 0.1);
+  };
+
+  const createClap = () => {
+    const ctx = audioContextRef.current;
+    for (let i = 0; i < 3; i++) {
+      const delay = i * 0.01;
+      const noise = ctx.createBufferSource();
+      const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      for (let j = 0; j < output.length; j++) {
+        output[j] = Math.random() * 2 - 1;
+      }
+      noise.buffer = noiseBuffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 1000;
+      filter.Q.value = 1;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.4, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.05);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start(ctx.currentTime + delay);
+      noise.stop(ctx.currentTime + delay + 0.05);
+    }
+  };
+
+  const createHiHat = () => {
+    const ctx = audioContextRef.current;
+    const freqs = [296, 285, 365, 445, 540, 630];
+    const gain = ctx.createGain();
+
+    freqs.forEach(freq => {
+      const osc = ctx.createOscillator();
+      osc.type = 'square';
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.04);
+    });
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 7000;
+
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.04);
+
+    gain.connect(filter);
+    filter.connect(ctx.destination);
+  };
+
+  const createCymbal = () => {
+    const ctx = audioContextRef.current;
+    const freqs = [296, 285, 365, 445, 540, 630];
+    const gain = ctx.createGain();
+
+    freqs.forEach(freq => {
+      const osc = ctx.createOscillator();
+      osc.type = 'square';
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.5);
+    });
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 7000;
+
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+
+    gain.connect(filter);
+    filter.connect(ctx.destination);
+  };
+
+  const createTom = () => {
+    const ctx = audioContextRef.current;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(130, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.2);
+
+    gain.gain.setValueAtTime(0.8, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.2);
+  };
+
+  const createRimshot = () => {
+    const ctx = audioContextRef.current;
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc1.type = 'square';
+    osc2.type = 'square';
+    osc1.frequency.value = 1000;
+    osc2.frequency.value = 1200;
+
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.02);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc1.start(ctx.currentTime);
+    osc2.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 0.02);
+    osc2.stop(ctx.currentTime + 0.02);
+  };
+
+  const createShaker = () => {
+    const ctx = audioContextRef.current;
+    const noise = ctx.createBufferSource();
+    const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < output.length; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+    noise.buffer = noiseBuffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 4000;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.start(ctx.currentTime);
+    noise.stop(ctx.currentTime + 0.08);
+  };
+
+  const createPerc = () => {
+    const ctx = audioContextRef.current;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(400, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.05);
+
+    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.05);
+  };
+
+  const playSound = async (instrument) => {
+    const ctx = initAudioContext();
+    if (ctx.state === 'suspended') {
+      await ctx.resume();
+    }
+
+    switch(instrument) {
+      case 'kick': createKickDrum(); break;
+      case 'snare': createSnare(); break;
+      case 'clap': createClap(); break;
+      case 'hihat': createHiHat(); break;
+      case 'cymbal': createCymbal(); break;
+      case 'tom': createTom(); break;
+      case 'rim': createRimshot(); break;
+      case 'shaker': createShaker(); break;
+      case 'perc': createPerc(); break;
+    }
+  };
+
+  // Pattern playback
+  const playPattern = (pattern) => {
+    stopPattern();
+    setPlayingPattern(pattern);
+    setCurrentStep(0);
+
+    // Play the first step immediately
+    const ctx = initAudioContext();
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+    instruments.forEach(inst => {
+      if (pattern[inst] && pattern[inst].includes(0)) {
+        playSound(inst);
+      }
+    });
+  };
+
+  const stopPattern = () => {
+    setPlayingPattern(null);
+    setCurrentStep(0);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  };
+
+  // Save current tab to localStorage
+  useEffect(() => {
+    localStorage.setItem('drumsCurrentTab', currentTab);
+  }, [currentTab]);
+
+  useEffect(() => {
+    if (playingPattern) {
+      const stepTime = (60 / tempo) * 1000 / 4;
+      intervalRef.current = setInterval(() => {
+        setCurrentStep(prev => {
+          const next = (prev + 1) % STEPS;
+          // Play sounds for this step
+          instruments.forEach(inst => {
+            if (playingPattern[inst] && playingPattern[inst].includes(next)) {
+              playSound(inst);
+            }
+          });
+          return next;
+        });
+      }, stepTime);
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [playingPattern, tempo]);
+
+  const copyPatternToEditor = (pattern) => {
+    const newPattern = {};
+    instruments.forEach(inst => {
+      newPattern[inst] = pattern[inst] ? [...pattern[inst]] : [];
+    });
+    setEditorPattern(newPattern);
+    setEditorName(pattern.name + ' (Copy)');
+    setEditorVisible(true);
+    setTimeout(() => {
+      document.getElementById('editor-section')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  const toggleEditorCell = (inst, step) => {
+    setEditorPattern(prev => {
+      const newPattern = { ...prev };
+      const arr = [...newPattern[inst]];
+      const index = arr.indexOf(step);
+      if (index > -1) {
+        arr.splice(index, 1);
+      } else {
+        arr.push(step);
+        arr.sort((a, b) => a - b);
+        playSound(inst);
+      }
+      newPattern[inst] = arr;
+      return newPattern;
+    });
+  };
+
+  const clearEditor = () => {
+    if (confirm('Clear all notes from the editor?')) {
+      const cleared = {};
+      instruments.forEach(inst => { cleared[inst] = []; });
+      setEditorPattern(cleared);
+    }
+  };
+
+  const savePattern = () => {
+    const hasNotes = instruments.some(inst => editorPattern[inst].length > 0);
+    if (!hasNotes) {
+      alert('Please add some notes to your beat first!');
+      return;
+    }
+
+    const newPattern = {
+      name: `${userPatterns.length + 1}. ${editorName}`,
+      ...editorPattern
+    };
+    setUserPatterns([...userPatterns, newPattern]);
+    alert(`Beat "${editorName}" saved!`);
+  };
+
+  const deleteUserPattern = (index) => {
+    if (confirm(`Delete "${userPatterns[index].name}"?`)) {
+      setUserPatterns(userPatterns.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleTapTempo = () => {
+    const now = Date.now();
+    const newTapTimes = [...tapTimes, now];
+
+    // Keep only last 4 taps
+    if (newTapTimes.length > 4) {
+      newTapTimes.shift();
+    }
+
+    if (newTapTimes.length >= 2) {
+      const intervals = [];
+      for (let i = 1; i < newTapTimes.length; i++) {
+        intervals.push(newTapTimes[i] - newTapTimes[i - 1]);
+      }
+      const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+      const bpm = Math.round(60000 / avgInterval);
+      setTempo(Math.max(60, Math.min(240, bpm)));
+    }
+
+    setTapTimes(newTapTimes);
+
+    // Reset if last tap was more than 3 seconds ago
+    setTimeout(() => {
+      setTapTimes(prev => {
+        if (prev.length > 0 && Date.now() - prev[prev.length - 1] > 3000) {
+          return [];
+        }
+        return prev;
+      });
+    }, 3000);
+  };
+
+  // Filter patterns based on search
+  const allPatterns = [...userPatterns, ...patterns, ...edmPatterns];
+  const filteredPatterns = allPatterns.filter(p =>
+    !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const PatternGrid = ({ pattern, isEditor = false }) => {
+    const availableInstruments = instruments.filter(inst => pattern[inst]);
+    const isPlaying = playingPattern === pattern;
+
+    return (
+      <div className="midi-grid">
+        {availableInstruments.map(inst => (
+          <>
+            <div key={`label-${inst}`} className={`instrument-label ${inst}`}>
+              {inst.toUpperCase()}
+            </div>
+            {Array.from({ length: STEPS }).map((_, i) => (
+              <div
+                key={`${inst}-${i}`}
+                className={`grid-cell ${inst} ${pattern[inst].includes(i) ? 'active' : ''} ${
+                  isPlaying && currentStep === i ? 'playing' : ''
+                } ${isEditor ? 'editable' : ''}`}
+                onClick={isEditor ? () => toggleEditorCell(inst, i) : undefined}
+              >
+                {(i === 0 || i === 4 || i === 8 || i === 12) && (
+                  <div className="beat-marker">{(i / 4) + 1}</div>
+                )}
+              </div>
+            ))}
+          </>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="container drums-page">
+      <h1>🥁 Drums</h1>
+
+      <div className="tab-buttons">
+        <button
+          className={`tab-button ${currentTab === 'patterns' ? 'active' : ''}`}
+          onClick={() => setCurrentTab('patterns')}
+        >
+          Patterns
+        </button>
+        <button
+          className={`tab-button ${currentTab === 'roadmap' ? 'active' : ''}`}
+          onClick={() => setCurrentTab('roadmap')}
+        >
+          Learning Roadmap 📚
+        </button>
+      </div>
+
+      {currentTab === 'patterns' && (
+        <div className="tab-content active">
+          <div className="controls-wrapper">
+            <div className="tempo-control">
+              <label>Tempo (BPM):</label>
+              <div className="tempo-inputs">
+                <button className="tempo-btn" onClick={() => setTempo(Math.max(60, tempo - 1))}>−</button>
+                <input
+                  type="number"
+                  id="tempo-input"
+                  min="60"
+                  max="240"
+                  value={tempo}
+                  onChange={(e) => setTempo(Math.max(60, Math.min(240, Number(e.target.value))))}
+                />
+                <button className="tempo-btn" onClick={() => setTempo(Math.min(240, tempo + 1))}>+</button>
+              </div>
+              <button id="tap-tempo" onClick={handleTapTempo}>🎵 Tap Tempo</button>
+            </div>
+
+            <div className="search-container">
+              <label>Search:</label>
+              <input
+                type="text"
+                id="search-input"
+                placeholder="Find a beat..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            <div className="master-controls">
+              <button
+                id="create-beat-btn"
+                className={editorVisible ? 'active' : ''}
+                onClick={() => setEditorVisible(!editorVisible)}
+              >
+                {editorVisible ? '✓ Close Editor' : '✏️ Create Your Own Beat'}
+              </button>
+              <button id="stop-all" onClick={stopPattern}>⏹ Stop All</button>
+            </div>
+          </div>
+
+          {editorVisible && (
+            <div className="editor-section visible" id="editor-section">
+              <h2>🎹 CREATE YOUR OWN BEAT</h2>
+              <div className="editor-controls">
+                <input
+                  type="text"
+                  id="pattern-name"
+                  placeholder="Enter beat name..."
+                  value={editorName}
+                  onChange={(e) => setEditorName(e.target.value)}
+                />
+                <button id="clear-editor" onClick={clearEditor}>Clear All</button>
+                <button id="save-pattern" onClick={savePattern}>Save Pattern</button>
+              </div>
+              <div className="pattern-container">
+                <div className="pattern-header">
+                  <div className="pattern-title">Click cells to add/remove notes</div>
+                  <button
+                    className={`play-button ${playingPattern === editorPattern ? 'playing' : ''}`}
+                    onClick={() => playingPattern === editorPattern ? stopPattern() : playPattern(editorPattern)}
+                  >
+                    {playingPattern === editorPattern ? '⏹ Stop' : '▶ Play'}
+                  </button>
+                </div>
+                <PatternGrid pattern={editorPattern} isEditor={true} />
+              </div>
+            </div>
+          )}
+
+          <div id="patterns">
+            {userPatterns.length > 0 && (
+              <>
+                <h2>⭐ YOUR CUSTOM BEATS</h2>
+                {userPatterns.map((pattern, index) => (
+                  <div key={`user-${index}`} className="pattern-container">
+                    <div className="pattern-header">
+                      <div className="pattern-title">{pattern.name}</div>
+                      <div style={{ display: 'flex', gap: '5px' }}>
+                        <button
+                          className={`play-button ${playingPattern === pattern ? 'playing' : ''}`}
+                          onClick={() => playingPattern === pattern ? stopPattern() : playPattern(pattern)}
+                        >
+                          {playingPattern === pattern ? '⏹ Stop' : '▶ Play'}
+                        </button>
+                        <button
+                          className="play-button"
+                          style={{ background: 'rgba(139, 92, 246, 0.8)', border: '1px solid rgba(167, 139, 250, 0.5)' }}
+                          onClick={() => copyPatternToEditor(pattern)}
+                        >
+                          📋 Copy
+                        </button>
+                        <button
+                          className="play-button"
+                          style={{ background: '#c53030', borderColor: '#c53030' }}
+                          onClick={() => deleteUserPattern(index)}
+                        >
+                          🗑 Delete
+                        </button>
+                      </div>
+                    </div>
+                    <PatternGrid pattern={pattern} />
+                  </div>
+                ))}
+              </>
+            )}
+
+            {filteredPatterns.filter(p => patterns.includes(p)).map((pattern, index) => (
+              <div key={`basic-${index}`} className="pattern-container">
+                <div className="pattern-header">
+                  <div className="pattern-title">{pattern.name}</div>
+                  <div style={{ display: 'flex', gap: '5px' }}>
+                    <button
+                      className={`play-button ${playingPattern === pattern ? 'playing' : ''}`}
+                      onClick={() => playingPattern === pattern ? stopPattern() : playPattern(pattern)}
+                    >
+                      {playingPattern === pattern ? '⏹ Stop' : '▶ Play'}
+                    </button>
+                    <button
+                      className="play-button"
+                      style={{ background: 'rgba(139, 92, 246, 0.8)', border: '1px solid rgba(167, 139, 250, 0.5)' }}
+                      onClick={() => copyPatternToEditor(pattern)}
+                    >
+                      📋 Copy
+                    </button>
+                  </div>
+                </div>
+                <PatternGrid pattern={pattern} />
+              </div>
+            ))}
+
+            {filteredPatterns.filter(p => edmPatterns.includes(p)).length > 0 && (
+              <>
+                <h2>🎧 EDM BEATS</h2>
+                {filteredPatterns.filter(p => edmPatterns.includes(p)).map((pattern, index) => (
+                  <div key={`edm-${index}`} className="pattern-container">
+                    <div className="pattern-header">
+                      <div className="pattern-title">{pattern.name}</div>
+                      <div style={{ display: 'flex', gap: '5px' }}>
+                        <button
+                          className={`play-button ${playingPattern === pattern ? 'playing' : ''}`}
+                          onClick={() => playingPattern === pattern ? stopPattern() : playPattern(pattern)}
+                        >
+                          {playingPattern === pattern ? '⏹ Stop' : '▶ Play'}
+                        </button>
+                        <button
+                          className="play-button"
+                          style={{ background: 'rgba(139, 92, 246, 0.8)', border: '1px solid rgba(167, 139, 250, 0.5)' }}
+                          onClick={() => copyPatternToEditor(pattern)}
+                        >
+                          📋 Copy
+                        </button>
+                      </div>
+                    </div>
+                    <PatternGrid pattern={pattern} />
+                  </div>
+                ))}
+              </>
+            )}
+
+            {filteredPatterns.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+                No beats found matching "<strong>{searchQuery}</strong>"
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {currentTab === 'roadmap' && <DrumRoadmap />}
+    </div>
+  );
+}
+
+export default DrumsPage;

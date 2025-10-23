@@ -1,0 +1,90 @@
+.roadmap-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.roadmap-section {
+  background: #3a3a3a;
+  border-radius: 8px;
+  padding: 25px;
+  margin-bottom: 25px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.roadmap-section h2 {
+  color: #00d9ff;
+  margin-bottom: 15px;
+  font-size: 22px;
+}
+
+.roadmap-section h3 {
+  color: #fff;
+  margin: 20px 0 10px 0;
+  font-size: 18px;
+}
+
+.roadmap-section p {
+  line-height: 1.8;
+  color: #aaa;
+  margin-bottom: 15px;
+}
+
+.roadmap-section ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.roadmap-section li {
+  padding: 10px 0;
+  color: #ccc;
+  line-height: 1.6;
+  border-bottom: 1px solid #333;
+}
+
+.roadmap-section li:last-child {
+  border-bottom: none;
+}
+
+.roadmap-section li:before {
+  content: "✓ ";
+  color: #00d9ff;
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+.level-badge {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.level-beginner {
+  background: #2a9d2a;
+  color: #fff;
+}
+
+.level-intermediate {
+  background: #ff9800;
+  color: #fff;
+}
+
+.level-advanced {
+  background: #ff6b6b;
+  color: #fff;
+}
+
+.tip-box {
+  background: rgba(0, 217, 255, 0.1);
+  border-left: 4px solid #00d9ff;
+  padding: 15px;
+  margin: 15px 0;
+  border-radius: 5px;
+}
+
+.tip-box strong {
+  color: #00d9ff;
+  font-weight: bold;
+}

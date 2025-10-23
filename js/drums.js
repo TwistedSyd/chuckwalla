@@ -176,8 +176,16 @@
             }
         ];
 
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let audioContext = null;
         let currentlyPlaying = null;
+
+        // Initialize audio context on first user interaction
+        function initAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioContext;
+        }
         let tempo = 120;
         let userPatterns = [];
         let currentEditorPattern = {
@@ -464,7 +472,13 @@
             osc.stop(audioContext.currentTime + 0.05);
         }
 
-        function playSound(instrument) {
+        async function playSound(instrument) {
+            // Initialize and resume audio context (required by browsers)
+            const ctx = initAudioContext();
+            if (ctx.state === 'suspended') {
+                await ctx.resume();
+            }
+
             switch(instrument) {
                 case 'kick': createKickDrum(); break;
                 case 'snare': createSnare(); break;
@@ -552,6 +566,11 @@
             playButton.className = 'play-button';
             playButton.textContent = '▶ Play';
             playButton.dataset.patternId = index;
+
+            // Add click handler for play button
+            playButton.addEventListener('click', async function() {
+                await playPattern(index, this);
+            });
 
             const copyButton = document.createElement('button');
             copyButton.className = 'play-button copy-button'; // Add copy-button class to distinguish it
@@ -650,10 +669,10 @@
                             parseInt(cell.dataset.step) === currentStep
                         );
 
-                        stepCells.forEach(cell => {
+                        stepCells.forEach(async (cell) => {
                             cell.classList.add('playing');
                             if (cell.classList.contains('active')) {
-                                playSound(cell.dataset.instrument);
+                                await playSound(cell.dataset.instrument);
                             }
                         });
 
@@ -699,7 +718,7 @@
                     }
 
                     // Add click/touch handler for editing
-                    const handleCellToggle = function() {
+                    const handleCellToggle = async function() {
                         const step = parseInt(this.dataset.step);
                         const instrument = this.dataset.instrument;
 
@@ -713,7 +732,7 @@
                             this.classList.add('active');
                             currentEditorPattern[instrument].push(step);
                             currentEditorPattern[instrument].sort((a, b) => a - b);
-                            playSound(instrument);
+                            await playSound(instrument);
                         }
                     };
 
@@ -736,39 +755,45 @@
             return container;
         }
 
-        function playPattern(patternIndex, button) {
+        async function playPattern(patternIndex, button) {
             if (currentlyPlaying !== null) {
                 stopPattern();
             }
 
+            // Initialize audio context on first play
+            initAudioContext();
+
             // Combine all pattern arrays
             const allPatterns = [...userPatterns, ...patterns, ...edmPatterns];
             const pattern = allPatterns[patternIndex];
-            const cells = button.parentElement.parentElement.querySelectorAll('.grid-cell');
+            // Find the container (pattern-container) and then find grid cells within it
+            const container = button.closest('.pattern-container');
+            const cells = container.querySelectorAll('.grid-cell');
             let currentStep = 0;
             const stepTime = (60 / tempo) * 1000 / 4;
 
             button.textContent = '⏹ Stop';
             button.classList.add('playing');
 
-            function step() {
+            async function step() {
                 cells.forEach(cell => cell.classList.remove('playing'));
 
                 const stepCells = Array.from(cells).filter(cell =>
                     parseInt(cell.dataset.step) === currentStep
                 );
 
-                stepCells.forEach(cell => {
+                // Play sounds for all active cells at this step
+                for (const cell of stepCells) {
                     cell.classList.add('playing');
                     if (cell.classList.contains('active')) {
-                        playSound(cell.dataset.instrument);
+                        await playSound(cell.dataset.instrument);
                     }
-                });
+                }
 
                 currentStep = (currentStep + 1) % 16;
             }
 
-            step();
+            await step();
             currentlyPlaying = setInterval(step, stepTime);
 
             button.dataset.intervalId = currentlyPlaying;

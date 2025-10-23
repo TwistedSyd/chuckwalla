@@ -1,0 +1,59 @@
+.nav-icons {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+  display: flex;
+  gap: 10px;
+}
+
+.nav-icon-button {
+  width: 50px;
+  height: 50px;
+  background: #3a3a3a;
+  border: 2px solid #555;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.3s;
+}
+
+.nav-icon-button:hover {
+  background: #444;
+  border-color: #666;
+  transform: translateY(-2px);
+}
+
+/* Default active state */
+.nav-icon-button.active {
+  transform: translateY(-2px);
+}
+
+/* Specific colors for each icon when active */
+.nav-drums.active {
+  background: #ec4899;
+  border-color: #ec4899;
+  box-shadow: 0 4px 8px rgba(236, 72, 153, 0.4);
+}
+
+.nav-piano.active {
+  background: #00d9ff;
+  border-color: #00d9ff;
+  box-shadow: 0 4px 8px rgba(0, 217, 255, 0.4);
+}
+
+.nav-guitar.active {
+  background: #f97316;
+  border-color: #f97316;
+  box-shadow: 0 4px 8px rgba(249, 115, 22, 0.4);
+}
+
+.nav-circle.active {
+  background: #10b981;
+  border-color: #10b981;
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
+}

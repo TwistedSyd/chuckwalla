@@ -1,0 +1,25 @@
+.midi-status {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.midi-status.connected {
+  background: #10b981;
+  color: #fff;
+  border: 2px solid #059669;
+}
+
+.midi-status.disconnected {
+  background: #374151;
+  color: #9ca3af;
+  border: 2px solid #4b5563;
+}
