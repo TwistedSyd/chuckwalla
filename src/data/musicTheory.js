@@ -1,4 +1,3 @@
-// Musical theory data
 export const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
 export const noteDisplay = {
@@ -9,7 +8,6 @@ export const noteDisplay = {
   'A#': 'A#/Bb'
 };
 
-// Chord formulas (semitones from root)
 export const chordFormulas = {
   'major': { intervals: [0, 4, 7], name: 'Major', formula: '1-3-5' },
   'minor': { intervals: [0, 3, 7], name: 'Minor', formula: '1-♭3-5' },
@@ -27,7 +25,6 @@ export const chordFormulas = {
   'minor9': { intervals: [0, 3, 7, 10, 14], name: 'Minor 9th', formula: '1-♭3-5-♭7-9' },
 };
 
-// Scale formulas (semitones from root)
 export const scaleFormulas = {
   'major': {
     intervals: [0, 2, 4, 5, 7, 9, 11],
@@ -115,51 +112,42 @@ export const scaleFormulas = {
   },
 };
 
-// Keyboard mapping
 export const keyMap = {
-  // First octave
   'a': 'C', 'w': 'C#', 's': 'D', 'e': 'D#',
   'd': 'E', 'f': 'F', 't': 'F#', 'g': 'G',
   'y': 'G#', 'h': 'A', 'u': 'A#', 'j': 'B',
-  // Second octave
   'k': 'C', 'i': 'C#', 'l': 'D', 'o': 'D#',
   ';': 'E', "'": 'F', 'p': 'F#', '[': 'G',
   ']': 'G#', '\\': 'A'
 };
 
-// Keys in the first octave
 export const firstOctaveKeys = ['a', 'w', 's', 'e', 'd', 'f', 't', 'g', 'y', 'h', 'u', 'j'];
 
-// Function to get octave offset based on key
 export function getOctaveOffset(key) {
   return firstOctaveKeys.includes(key.toLowerCase()) ? 0 : 1;
 }
 
-// Generate frequency for a note
 export function getNoteFrequency(note, octave) {
   const noteIndex = notes.indexOf(note);
   const A4 = 440;
-  const A4Index = 9; // A is at index 9
+  const A4Index = 9;
   const semitones = (octave - 4) * 12 + (noteIndex - A4Index);
   return A4 * Math.pow(2, semitones / 12);
 }
 
-// Get chord intervals based on chord quality
 export function getChordIntervals(chordQuality) {
-  // Parse the chord quality from strings like "I (maj)", "ii (min)", "vii° (dim)"
   if (chordQuality.includes('maj')) {
-    return [0, 4, 7]; // Major triad
+    return [0, 4, 7];
   } else if (chordQuality.includes('min')) {
-    return [0, 3, 7]; // Minor triad
+    return [0, 3, 7];
   } else if (chordQuality.includes('dim')) {
-    return [0, 3, 6]; // Diminished triad
+    return [0, 3, 6];
   } else if (chordQuality.includes('aug')) {
-    return [0, 4, 8]; // Augmented triad
+    return [0, 4, 8];
   }
-  return [0, 4, 7]; // Default to major
+  return [0, 4, 7];
 }
 
-// Chord patterns for detection
 export const chordPatterns = {
   '0,4,7': 'Major',
   '0,3,7': 'Minor',
@@ -187,7 +175,6 @@ export const chordPatterns = {
   '0,6': 'Tritone'
 };
 
-// Detect chord from currently playing notes
 export function detectChord(notesSet) {
   if (notesSet.size === 0) {
     return { name: '-', notes: 'Play some keys to see the chord' };
@@ -198,10 +185,8 @@ export function detectChord(notesSet) {
     return { name: noteDisplay[note] || note, notes: 'Single note' };
   }
 
-  // Convert set to sorted array of note indices
   const noteIndices = Array.from(notesSet).map(note => notes.indexOf(note)).sort((a, b) => a - b);
 
-  // Try each note as a potential root
   for (let i = 0; i < noteIndices.length; i++) {
     const potentialRoot = noteIndices[i];
     const intervals = noteIndices.map(idx => (idx - potentialRoot + 12) % 12).sort((a, b) => a - b);
@@ -213,7 +198,6 @@ export function detectChord(notesSet) {
       const rootDisplay = noteDisplay[root] || root;
       const notesList = Array.from(notesSet).map(n => noteDisplay[n] || n).join(', ');
 
-      // Add inversion indicator if not in root position
       const inversionText = i > 0 ? ` (${i === 1 ? '1st' : i === 2 ? '2nd' : i === 3 ? '3rd' : i + 'th'} inv)` : '';
 
       return {
@@ -223,7 +207,6 @@ export function detectChord(notesSet) {
     }
   }
 
-  // If no pattern matched, return custom
   const notesList = Array.from(notesSet).map(n => noteDisplay[n] || n).join(', ');
   return {
     name: 'Custom',

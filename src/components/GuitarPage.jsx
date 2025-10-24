@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import GuitarRoadmap from './GuitarRoadmap';
 import GuitarFretboard from './GuitarFretboard';
-import { chordFormulas, scaleFormulas, notes as musicNotes } from '../data/musicTheory';
+import { chordFormulas, scaleFormulas } from '../data/musicTheory';
 import './GuitarPage.css';
 
 const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -15,7 +15,7 @@ const tunings = {
   halfstep: ['D#', 'G#', 'C#', 'F#', 'A#', 'D#']
 };
 
-const stringOctaves = [2, 2, 3, 3, 3, 4]; // E2, A2, D3, G3, B3, E4
+const stringOctaves = [2, 2, 3, 3, 3, 4];
 
 function GuitarPage() {
   const [currentTab, setCurrentTab] = useState(() => {
@@ -23,25 +23,15 @@ function GuitarPage() {
   });
   const [tuning, setTuning] = useState('standard');
   const [showNotes, setShowNotes] = useState(true);
-  const [chorusEnabled, setChorusEnabled] = useState(false);
-  const [reverbEnabled, setReverbEnabled] = useState(false);
-
-  // Chords tab state
   const [chordRoot, setChordRoot] = useState('C');
   const [chordType, setChordType] = useState('major');
   const [chordPositionIndex, setChordPositionIndex] = useState(0);
-
-  // Scales tab state
   const [scaleRoot, setScaleRoot] = useState('C');
   const [scaleType, setScaleType] = useState('major');
   const [scalePosition, setScalePosition] = useState(0);
   const [activeScaleChord, setActiveScaleChord] = useState('scale');
-
-  // Currently playing notes (for display)
   const [currentlyPlaying, setCurrentlyPlaying] = useState(new Set());
   const playingTimeouts = useRef(new Map());
-
-  // Active notes on fretboard (for visual feedback during scale playback)
   const [activeNotes, setActiveNotes] = useState([]);
 
   const audioContextRef = useRef(null);
@@ -52,17 +42,28 @@ function GuitarPage() {
     }
   }, []);
 
-  // Save current tab to localStorage
+  // Proactively resume audio context
+  const ensureAudioReady = async () => {
+    if (!audioContextRef.current) return;
+    const ctx = audioContextRef.current;
+    if (ctx.state === 'suspended') {
+      try {
+        await ctx.resume();
+        console.log('AudioContext preemptively resumed');
+      } catch (err) {
+        console.error('Failed to resume AudioContext:', err);
+      }
+    }
+  };
+
   useEffect(() => {
     localStorage.setItem('guitarCurrentTab', currentTab);
   }, [currentTab]);
 
-  // Reset chord position when root note or chord type changes
   useEffect(() => {
     setChordPositionIndex(0);
   }, [chordRoot, chordType, tuning]);
 
-  // Clamp chord position index if it's out of bounds
   useEffect(() => {
     if (currentTab === 'chords') {
       const { notes: chordNotes } = calculateTheoryNotes();
@@ -73,25 +74,28 @@ function GuitarPage() {
     }
   }, [chordPositionIndex, chordRoot, chordType, currentTab, tuning]);
 
-  // Clear currently playing notes when switching tabs
   useEffect(() => {
     if (currentTab !== 'play') {
-      // Clear all timeouts
       playingTimeouts.current.forEach(timeout => clearTimeout(timeout));
       playingTimeouts.current.clear();
       setCurrentlyPlaying(new Set());
     }
   }, [currentTab]);
 
-  const playNote = (note, octave, duration = 0.5) => {
+  const playNote = async (note, octave, duration = 0.5) => {
     if (!audioContextRef.current) return;
 
+    // Ensure audio is ready first
+    await ensureAudioReady();
+
     const ctx = audioContextRef.current;
+    if (ctx.state !== 'running') return;
+
     const now = ctx.currentTime;
 
     const noteIndex = notes.indexOf(note);
     const A4 = 440;
-    const semitones = (octave - 4) * 12 + (noteIndex - 9); // A is at index 9
+    const semitones = (octave - 4) * 12 + (noteIndex - 9);
     const frequency = A4 * Math.pow(2, semitones / 12);
 
     const osc = ctx.createOscillator();
@@ -110,17 +114,13 @@ function GuitarPage() {
     osc.start(now);
     osc.stop(now + duration);
 
-    // Update currently playing display (for Free Play tab)
     if (currentTab === 'play') {
-      // Add note to currently playing (shows instantly at full opacity)
       setCurrentlyPlaying(prev => new Set([...prev, note]));
 
-      // Clear and set timeout to remove this specific note
       if (playingTimeouts.current.has(note)) {
         clearTimeout(playingTimeouts.current.get(note));
       }
 
-      // Remove note after 800ms
       const timeout = setTimeout(() => {
         setCurrentlyPlaying(prev => {
           const newSet = new Set(prev);
@@ -151,7 +151,6 @@ function GuitarPage() {
     return { notes: theoryNotes, formula };
   };
 
-  // Find all frets where the root note appears
   const findRootNoteFrets = (rootNote) => {
     const currentTuning = tunings[tuning];
     const rootFrets = new Set();
@@ -173,16 +172,14 @@ function GuitarPage() {
     return Array.from(rootFrets).sort((a, b) => a - b);
   };
 
-  // Build a chord voicing from a starting position
   const buildVoicingFromPosition = (startString, startFret, rootNote, chordNotes, maxFretSpan = 5) => {
     const currentTuning = tunings[tuning];
     const voicing = [];
     const usedStrings = new Set();
-    const usedDegrees = new Set(); // Track which scale degrees we've already used
+    const usedDegrees = new Set();
     const minFret = Math.max(0, startFret - 1);
     const maxFret = Math.min(21, startFret + maxFretSpan);
 
-    // Calculate scale degrees for each chord note
     const rootIndex = notes.indexOf(rootNote);
     const getScaleDegree = (note) => {
       const noteIndex = notes.indexOf(note);
@@ -208,12 +205,10 @@ function GuitarPage() {
           const isRoot = fretNote === rootNote;
           const degree = getScaleDegree(fretNote);
 
-          // For the first note (lowest string), ONLY accept root notes
           if (voicing.length === 0 && !isRoot) {
             continue;
           }
 
-          // Skip if we already have this scale degree
           if (usedDegrees.has(degree)) {
             continue;
           }
@@ -247,27 +242,21 @@ function GuitarPage() {
     return voicing.length >= 3 ? voicing : null;
   };
 
-  // Find all possible chord voicings (one unique voicing per root note fret)
   const findAllChordVoicings = (rootNote, chordNotes) => {
     const rootFrets = findRootNoteFrets(rootNote);
     const voicingsByRootFret = new Map();
 
-    // For each root note fret, find the best unique voicing
     rootFrets.forEach(rootFret => {
-      // Try different starting strings to find voicings at this root fret
       for (let startString = 0; startString <= 3; startString++) {
         const voicing = buildVoicingFromPosition(startString, rootFret, rootNote, chordNotes);
 
         if (voicing && voicing.length >= 3) {
-          // Create a signature for this voicing (the actual positions on fretboard)
           const voicingSignature = voicing.map(n => `${n.string}-${n.fret}`).sort().join(',');
 
-          // Check if we already have this exact voicing for another root fret
           const isDuplicate = Array.from(voicingsByRootFret.values()).some(v =>
             v.signature === voicingSignature
           );
 
-          // Only add if we don't have a voicing for this root fret yet, and it's not a duplicate
           if (!voicingsByRootFret.has(rootFret) && !isDuplicate) {
             const lowestNote = Math.min(...voicing.map(n => n.octave * 12 + notes.indexOf(n.note)));
             voicingsByRootFret.set(rootFret, {
@@ -276,46 +265,15 @@ function GuitarPage() {
               rootFret: rootFret,
               signature: voicingSignature
             });
-            break; // Found a voicing for this root fret, move to next
+            break;
           }
         }
       }
     });
 
-    // Convert map to array and sort by lowest note
     const allVoicings = Array.from(voicingsByRootFret.values());
     allVoicings.sort((a, b) => a.lowestNote - b.lowestNote);
     return allVoicings;
-  };
-
-  // Get the best chord voicing at or near a specific fret
-  const getChordVoicingAtFret = (targetFret, rootNote, chordNotes) => {
-    const allVoicings = findAllChordVoicings(rootNote, chordNotes);
-
-    if (allVoicings.length === 0) return [];
-
-    let bestVoicing = null;
-    let bestScore = Infinity;
-
-    allVoicings.forEach(voicing => {
-      const rootNotes = voicing.notes.filter(n => n.isRoot);
-      if (rootNotes.length > 0) {
-        const closestRoot = rootNotes.reduce((closest, note) => {
-          const dist = Math.abs(note.fret - targetFret);
-          const closestDist = Math.abs(closest.fret - targetFret);
-          return dist < closestDist ? note : closest;
-        });
-
-        const distance = Math.abs(closestRoot.fret - targetFret);
-
-        if (distance < bestScore) {
-          bestScore = distance;
-          bestVoicing = voicing;
-        }
-      }
-    });
-
-    return bestVoicing ? bestVoicing.notes : [];
   };
 
   const playChord = () => {
@@ -334,7 +292,6 @@ function GuitarPage() {
       }, index * 100);
     });
 
-    // Light up all notes in the chord
     setActiveNotes(voicing.map(v => ({ string: v.string, fret: v.fret })));
 
     setTimeout(() => {
@@ -354,7 +311,6 @@ function GuitarPage() {
     setActiveNotes([]);
     voicing.forEach((pos, index) => {
       setTimeout(() => {
-        // Light up this specific note
         setActiveNotes([{ string: pos.string, fret: pos.fret }]);
         playNote(pos.note, pos.octave, 0.5);
       }, index * 250);
@@ -369,11 +325,9 @@ function GuitarPage() {
     const { notes: scaleNotes } = calculateTheoryNotes();
     const rootNote = currentTab === 'scales' ? scaleRoot : chordRoot;
 
-    // Get all available positions from the box pattern with octave info
     const boxPattern = getScaleBoxPattern(scalePosition, rootNote, scaleNotes);
     if (boxPattern.length === 0) return;
 
-    // Add octave information to each position in the box pattern
     const boxWithOctave = boxPattern.map(pos => {
       const openNote = tunings[tuning][pos.string];
       const openNoteIndex = notes.indexOf(openNote);
@@ -381,11 +335,9 @@ function GuitarPage() {
       return { ...pos, octave };
     });
 
-    // Find root notes within the box pattern
     const boxRootNotes = boxWithOctave.filter(n => n.note === rootNote);
     if (boxRootNotes.length === 0) return;
 
-    // Sort box roots by pitch and take the lowest
     boxRootNotes.sort((a, b) => {
       const pitchA = a.octave * 12 + notes.indexOf(a.note);
       const pitchB = b.octave * 12 + notes.indexOf(b.note);
@@ -394,38 +346,32 @@ function GuitarPage() {
 
     const startRoot = boxRootNotes[0];
 
-    // Build ordered scale degrees from root
     const rootIndex = scaleNotes.indexOf(rootNote);
     const orderedScale = [];
     for (let i = 0; i < scaleNotes.length; i++) {
       orderedScale.push(scaleNotes[(rootIndex + i) % scaleNotes.length]);
     }
-    orderedScale.push(rootNote); // Add octave root
+    orderedScale.push(rootNote);
 
-    // Build the 8-note ascending scale pattern
     const scalePattern = [];
     let currentOctave = startRoot.octave;
     let lastNoteIndex = notes.indexOf(rootNote);
 
     scalePattern.push(startRoot);
 
-    // For each of the remaining 7 notes, find the best candidate in the box
     for (let i = 1; i < orderedScale.length; i++) {
       const targetNote = orderedScale[i];
       const noteIndex = notes.indexOf(targetNote);
 
-      // Determine target octave
       if (noteIndex <= lastNoteIndex) {
         currentOctave++;
       }
 
-      // Find all instances of this note at this octave in the box
       const candidates = boxWithOctave.filter(n =>
         n.note === targetNote && n.octave === currentOctave
       );
 
       if (candidates.length > 0) {
-        // Choose the one closest to the last played note
         candidates.sort((a, b) => {
           const lastNote = scalePattern[scalePattern.length - 1];
           const distA = Math.abs(a.string - lastNote.string) + Math.abs(a.fret - lastNote.fret);
@@ -439,18 +385,14 @@ function GuitarPage() {
       lastNoteIndex = noteIndex;
     }
 
-    // Play the sequence with visual feedback
     setActiveNotes([]);
     scalePattern.forEach((pos, index) => {
       setTimeout(() => {
-        // Light up the note
         setActiveNotes([{ string: pos.string, fret: pos.fret }]);
-        // Play the sound
         playNote(pos.note, pos.octave, 0.5);
       }, index * 250);
     });
 
-    // Clear active notes after sequence completes
     setTimeout(() => {
       setActiveNotes([]);
     }, scalePattern.length * 250 + 500);
@@ -460,11 +402,9 @@ function GuitarPage() {
     const { notes: scaleNotes } = calculateTheoryNotes();
     const rootNote = currentTab === 'scales' ? scaleRoot : chordRoot;
 
-    // Get all available positions from the box pattern with octave info
     const boxPattern = getScaleBoxPattern(scalePosition, rootNote, scaleNotes);
     if (boxPattern.length === 0) return;
 
-    // Add octave information to each position in the box pattern
     const boxWithOctave = boxPattern.map(pos => {
       const openNote = tunings[tuning][pos.string];
       const openNoteIndex = notes.indexOf(openNote);
@@ -472,11 +412,9 @@ function GuitarPage() {
       return { ...pos, octave };
     });
 
-    // Find root notes within the box pattern
     const boxRootNotes = boxWithOctave.filter(n => n.note === rootNote);
     if (boxRootNotes.length === 0) return;
 
-    // Sort box roots by pitch and take the lowest
     boxRootNotes.sort((a, b) => {
       const pitchA = a.octave * 12 + notes.indexOf(a.note);
       const pitchB = b.octave * 12 + notes.indexOf(b.note);
@@ -485,38 +423,32 @@ function GuitarPage() {
 
     const startRoot = boxRootNotes[0];
 
-    // Build ordered scale degrees from root
     const rootIndex = scaleNotes.indexOf(rootNote);
     const orderedScale = [];
     for (let i = 0; i < scaleNotes.length; i++) {
       orderedScale.push(scaleNotes[(rootIndex + i) % scaleNotes.length]);
     }
-    orderedScale.push(rootNote); // Add octave root
+    orderedScale.push(rootNote);
 
-    // Build an 8-note ascending scale, then reverse for descending
     const scalePattern = [];
     let currentOctave = startRoot.octave;
     let lastNoteIndex = notes.indexOf(rootNote);
 
     scalePattern.push(startRoot);
 
-    // For each of the remaining 7 notes, find the best candidate in the box
     for (let i = 1; i < orderedScale.length; i++) {
       const targetNote = orderedScale[i];
       const noteIndex = notes.indexOf(targetNote);
 
-      // Determine target octave
       if (noteIndex <= lastNoteIndex) {
         currentOctave++;
       }
 
-      // Find all instances of this note at this octave in the box
       const candidates = boxWithOctave.filter(n =>
         n.note === targetNote && n.octave === currentOctave
       );
 
       if (candidates.length > 0) {
-        // Choose the one closest to the last played note
         candidates.sort((a, b) => {
           const lastNote = scalePattern[scalePattern.length - 1];
           const distA = Math.abs(a.string - lastNote.string) + Math.abs(a.fret - lastNote.fret);
@@ -530,21 +462,16 @@ function GuitarPage() {
       lastNoteIndex = noteIndex;
     }
 
-    // Reverse for descending
     scalePattern.reverse();
 
-    // Play the sequence with visual feedback
     setActiveNotes([]);
     scalePattern.forEach((pos, index) => {
       setTimeout(() => {
-        // Light up the note
         setActiveNotes([{ string: pos.string, fret: pos.fret }]);
-        // Play the sound
         playNote(pos.note, pos.octave, 0.5);
       }, index * 250);
     });
 
-    // Clear active notes after sequence completes
     setTimeout(() => {
       setActiveNotes([]);
     }, scalePattern.length * 250 + 500);
@@ -554,22 +481,17 @@ function GuitarPage() {
     const currentTuning = tunings[tuning];
     const boxNotes = [];
 
-    // Highlight 5 frets starting from the starting fret
-    // Position 0: frets 0-4, Position 1: frets 1-5, etc.
     const minFret = startingFret;
     const maxFret = Math.min(21, startingFret + 4);
 
-    // Search all strings within this fret range for scale notes
     for (let stringIndex = 0; stringIndex < 6; stringIndex++) {
       const stringNote = currentTuning[stringIndex];
       const stringNoteIndex = notes.indexOf(stringNote);
-      const stringOctave = stringOctaves[stringIndex];
 
       for (let fret = minFret; fret <= maxFret; fret++) {
         const fretNoteIndex = (stringNoteIndex + fret) % 12;
         const fretNote = notes[fretNoteIndex];
 
-        // Check if this note is in the scale
         if (scaleNotes.includes(fretNote)) {
           boxNotes.push({
             string: stringIndex,
@@ -588,12 +510,10 @@ function GuitarPage() {
     const { notes: highlightNotes } = calculateTheoryNotes();
     const currentRoot = currentTab === 'chords' ? chordRoot : scaleRoot;
 
-    // For chords tab, get the specific voicing at the current position
     let boxPattern = null;
     if (currentTab === 'chords') {
       const allVoicings = findAllChordVoicings(chordRoot, highlightNotes);
       const voicing = allVoicings[chordPositionIndex]?.notes || [];
-      // Convert voicing to box pattern format
       boxPattern = voicing.map(v => ({
         string: v.string,
         fret: v.fret,
@@ -601,7 +521,6 @@ function GuitarPage() {
         isRoot: v.isRoot
       }));
     } else if (currentTab === 'scales') {
-      // For scales tab, get the box pattern for position-based highlighting
       boxPattern = getScaleBoxPattern(scalePosition, currentRoot, highlightNotes);
     }
 
@@ -662,15 +581,13 @@ function GuitarPage() {
                     onClick={() => {
                       setActiveScaleChord(index);
 
-                      // Build diatonic chord from scale degrees (1st, 3rd, 5th)
-                      const chordRoot = theoryNotes[index]; // Root of THIS chord
+                      const chordRoot = theoryNotes[index];
                       const chordNotes = [
-                        theoryNotes[index],                           // Root
-                        theoryNotes[(index + 2) % theoryNotes.length], // 3rd
-                        theoryNotes[(index + 4) % theoryNotes.length]  // 5th
+                        theoryNotes[index],
+                        theoryNotes[(index + 2) % theoryNotes.length],
+                        theoryNotes[(index + 4) % theoryNotes.length]
                       ];
 
-                      // Get the current box pattern (highlighted scale shape) with octave info
                       const boxPattern = getScaleBoxPattern(scalePosition, scaleRoot, theoryNotes);
                       const boxWithOctaves = boxPattern.map(pos => {
                         const openNote = tunings[tuning][pos.string];
@@ -679,7 +596,6 @@ function GuitarPage() {
                         return { ...pos, octave };
                       });
 
-                      // STEP 1: Find the LOWEST root note in the box
                       const allRoots = boxWithOctaves.filter(n => n.note === chordRoot);
                       if (allRoots.length === 0) return;
 
@@ -689,13 +605,10 @@ function GuitarPage() {
                         return pitchA - pitchB;
                       });
 
-                      const bassRoot = allRoots[0]; // Lowest root
+                      const bassRoot = allRoots[0];
                       const bassRootPitch = bassRoot.octave * 12 + notes.indexOf(bassRoot.note);
-
-                      // STEP 2: Build the chord starting from this root
                       const voicingNotes = [bassRoot];
 
-                      // STEP 3: For the 3rd and 5th, find instances at or above the root pitch
                       for (let i = 1; i < chordNotes.length; i++) {
                         const chordNote = chordNotes[i];
                         const candidates = boxWithOctaves.filter(n => {
@@ -704,7 +617,6 @@ function GuitarPage() {
                         });
 
                         if (candidates.length > 0) {
-                          // Pick the lowest pitch candidate (closest to bass)
                           candidates.sort((a, b) => {
                             const pitchA = a.octave * 12 + notes.indexOf(a.note);
                             const pitchB = b.octave * 12 + notes.indexOf(b.note);
@@ -714,24 +626,20 @@ function GuitarPage() {
                         }
                       }
 
-                      // Sort by pitch (root is already guaranteed to be lowest)
                       voicingNotes.sort((a, b) => {
                         const pitchA = a.octave * 12 + notes.indexOf(a.note);
                         const pitchB = b.octave * 12 + notes.indexOf(b.note);
                         return pitchA - pitchB;
                       });
 
-                      // Light up the chord notes
                       setActiveNotes(voicingNotes.map(v => ({ string: v.string, fret: v.fret })));
 
-                      // Play the voicing
                       voicingNotes.forEach((note, i) => {
                         setTimeout(() => {
                           playNote(note.note, note.octave, 1);
                         }, i * 100);
                       });
 
-                      // Clear active notes after playing
                       setTimeout(() => {
                         setActiveNotes([]);
                       }, 1500);
@@ -802,14 +710,6 @@ function GuitarPage() {
                 <option value="dropd">Drop D</option>
                 <option value="halfstep">Half Step Down</option>
               </select>
-            </div>
-
-            <div className="control-group">
-              <h3>Guitar Effects</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px' }}>
-                <button className={`effect-btn ${chorusEnabled ? 'active' : ''}`} onClick={() => setChorusEnabled(!chorusEnabled)}>Chorus</button>
-                <button className={`effect-btn ${reverbEnabled ? 'active' : ''}`} onClick={() => setReverbEnabled(!reverbEnabled)}>Reverb</button>
-              </div>
             </div>
           </div>
           {renderFretboard()}

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import PianoKeyboard from './PianoKeyboard';
 import { detectChord, keyMap, getOctaveOffset } from '../data/musicTheory';
 
-function FreePlayTab({ octave, onOctaveChange, playNote, sustainEnabled, setSustainEnabled, showNoteLabels, setShowNoteLabels, chorusEnabled, toggleChorus, reverbEnabled, toggleReverb, pressedKeys, keyboardActiveKeys }) {
+function FreePlayTab({ octave, onOctaveChange, playNote, sustainEnabled, setSustainEnabled, showNoteLabels, setShowNoteLabels, chorusEnabled, toggleChorus, reverbEnabled, toggleReverb, pressedKeys, keyboardActiveKeys, midiActiveKeys, ensureAudioReady }) {
   const [currentlyPlayingNotes, setCurrentlyPlayingNotes] = useState(new Set());
   const [chordInfo, setChordInfo] = useState({ name: '-', notes: 'Play some keys to see the chord' });
   const noteTimeoutsRef = useRef(new Map());
@@ -29,15 +29,28 @@ function FreePlayTab({ octave, onOctaveChange, playNote, sustainEnabled, setSust
     return noteSet;
   }, [pressedKeys]);
 
-  // Track if notes are currently active (for fade effect)
-  const hasActiveNotes = currentlyPlayingNotes.size > 0 || keyboardNotes.size > 0;
+  // Get notes from MIDI input (extract note name from "C4", "D#5" format)
+  const midiNotes = useMemo(() => {
+    const noteSet = new Set();
+    if (midiActiveKeys) {
+      midiActiveKeys.forEach(keyId => {
+        // Extract note name without octave (e.g., "C4" -> "C", "D#5" -> "D#")
+        const note = keyId.replace(/\d+$/, '');
+        noteSet.add(note);
+      });
+    }
+    return noteSet;
+  }, [midiActiveKeys]);
 
-  // Update chord display when notes change (combine mouse and keyboard notes)
+  // Track if notes are currently active (for fade effect)
+  const hasActiveNotes = currentlyPlayingNotes.size > 0 || keyboardNotes.size > 0 || midiNotes.size > 0;
+
+  // Update chord display when notes change (combine mouse, keyboard, and MIDI notes)
   useEffect(() => {
-    const allNotes = new Set([...currentlyPlayingNotes, ...keyboardNotes]);
+    const allNotes = new Set([...currentlyPlayingNotes, ...keyboardNotes, ...midiNotes]);
     const chord = detectChord(allNotes);
     setChordInfo(chord);
-  }, [currentlyPlayingNotes, keyboardNotes]);
+  }, [currentlyPlayingNotes, keyboardNotes, midiNotes]);
 
   const handleKeyDown = (note, noteOctave) => {
     playNote(note, noteOctave);
@@ -143,14 +156,16 @@ function FreePlayTab({ octave, onOctaveChange, playNote, sustainEnabled, setSust
           <span className="octave-value">{octave}</span>
           <button className="octave-btn" onClick={() => onOctaveChange(1)}>+</button>
         </div>
-        <PianoKeyboard
-          octave={octave}
-          onNotePlay={playNote}
-          onKeyDown={handleKeyDown}
-          onKeyUp={handleKeyUp}
-          showKeyboardLabels={showNoteLabels}
-          externalActiveKeys={keyboardActiveKeys}
-        />
+        <div onMouseEnter={ensureAudioReady}>
+          <PianoKeyboard
+            octave={octave}
+            onNotePlay={playNote}
+            onKeyDown={handleKeyDown}
+            onKeyUp={handleKeyUp}
+            showKeyboardLabels={showNoteLabels}
+            externalActiveKeys={keyboardActiveKeys}
+          />
+        </div>
       </div>
 
       <div className="info-panel">

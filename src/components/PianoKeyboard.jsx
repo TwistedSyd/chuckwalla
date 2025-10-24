@@ -1,4 +1,4 @@
-import { useState, useEffect, memo, useRef } from 'react';
+import { useState, memo, useRef } from 'react';
 import { notes, keyMap, firstOctaveKeys } from '../data/musicTheory';
 import './PianoKeyboard.css';
 
@@ -14,7 +14,7 @@ const PianoKeyboard = memo(function PianoKeyboard({
   externalActiveKeys = new Set()
 }) {
   const [activeKeys, setActiveKeys] = useState(new Set());
-  const activeTouchesRef = useRef(new Map()); // Track which touch ID is on which key
+  const activeTouchesRef = useRef(new Map());
 
   const blackKeyPositions = {
     'C#': 1.0,
@@ -26,7 +26,6 @@ const PianoKeyboard = memo(function PianoKeyboard({
 
   const whiteKeyWidth = 50;
 
-  // Handle mouse events
   const handleMouseDown = (note, noteOctave) => {
     if (!isInteractive) return;
 
@@ -48,14 +47,12 @@ const PianoKeyboard = memo(function PianoKeyboard({
     onKeyUp?.(note, noteOctave);
   };
 
-  // Handle multi-touch events
   const handleTouchStart = (e, note, noteOctave) => {
     if (!isInteractive) return;
     e.preventDefault();
 
     const keyId = `${note}${noteOctave}`;
 
-    // Track each new touch point
     Array.from(e.changedTouches).forEach(touch => {
       activeTouchesRef.current.set(touch.identifier, keyId);
     });
@@ -71,7 +68,6 @@ const PianoKeyboard = memo(function PianoKeyboard({
 
     const keyId = `${note}${noteOctave}`;
 
-    // Remove tracking for ended touches
     Array.from(e.changedTouches).forEach(touch => {
       const touchKeyId = activeTouchesRef.current.get(touch.identifier);
       if (touchKeyId === keyId) {
@@ -79,7 +75,6 @@ const PianoKeyboard = memo(function PianoKeyboard({
       }
     });
 
-    // Only deactivate key if no more touches are on it
     const stillTouched = Array.from(activeTouchesRef.current.values()).includes(keyId);
     if (!stillTouched) {
       setActiveKeys(prev => {
@@ -91,7 +86,6 @@ const PianoKeyboard = memo(function PianoKeyboard({
     }
   };
 
-  // Render a single piano key
   const renderKey = (note, oct) => {
     const isBlackKey = note.includes('#');
     const keyId = `${note}${oct}`;
@@ -107,7 +101,6 @@ const PianoKeyboard = memo(function PianoKeyboard({
       left: `${((oct - (octave - 1)) * 7 * whiteKeyWidth) + (blackKeyPositions[note] * whiteKeyWidth)}px`
     } : {};
 
-    // Find keyboard key label for Free Play
     let keyboardKey = null;
     if (showKeyboardLabels) {
       if (oct === octave - 1) {
@@ -121,15 +114,14 @@ const PianoKeyboard = memo(function PianoKeyboard({
       }
     }
 
-    // Find interval label
     const intervalIndex = highlightedNotes.indexOf(note);
     const intervalLabel = intervalIndex >= 0 ? (intervalIndex === 0 && isRoot ? 'R' : intervalIndex + 1) : null;
 
     const keyStyle = isBlackKey ? {
       ...style,
-      touchAction: 'none' // Prevent default touch behaviors for better multi-touch
+      touchAction: 'none'
     } : {
-      touchAction: 'none' // Prevent default touch behaviors for better multi-touch
+      touchAction: 'none'
     };
 
     return (
@@ -159,11 +151,9 @@ const PianoKeyboard = memo(function PianoKeyboard({
 
   return (
     <div className="piano-keyboard">
-      {/* Generate 2 octaves worth of keys */}
       {[octave - 1, octave].map(oct => (
         notes.map(note => renderKey(note, oct))
       ))}
-      {/* Extra C key at the end (25th key) */}
       {renderKey('C', octave + 1)}
     </div>
   );

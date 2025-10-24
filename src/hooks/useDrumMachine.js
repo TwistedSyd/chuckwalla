@@ -4,8 +4,6 @@ export function useDrumMachine() {
   const audioContextRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [bpm, setBpm] = useState(120);
-  const intervalRef = useRef(null);
-  const currentStepRef = useRef(0);
 
   const initAudioContext = () => {
     if (!audioContextRef.current) {
@@ -236,6 +234,5 @@ export function useDrumMachine() {
     setIsPlaying,
     bpm,
     setBpm,
-    currentStep: currentStepRef.current,
   };
 }

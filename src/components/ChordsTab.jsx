@@ -48,7 +48,7 @@ function ChordsTab({ octave, onOctaveChange, playNote, keyboardActiveKeys = new 
       if (index > 0 && noteIndex <= lastNoteIndex) {
         currentOctaveOffset++;
       }
-      octaves.push(octave - 1 + currentOctaveOffset);
+      octaves.push(octave + currentOctaveOffset);
       lastNoteIndex = noteIndex;
     });
 
@@ -66,13 +66,13 @@ function ChordsTab({ octave, onOctaveChange, playNote, keyboardActiveKeys = new 
       clearTimeout(activeKeysTimeoutRef.current);
     }
 
-    // Clear active keys after 1 second
+    // Clear active keys after 3 seconds
     activeKeysTimeoutRef.current = setTimeout(() => {
       setActiveKeys(new Set());
-    }, 1000);
+    }, 3000);
 
     chordNotes.forEach((note, index) => {
-      playNote(note, octaves[index], 1);
+      playNote(note, octaves[index], 3);
     });
   };
 
@@ -88,7 +88,7 @@ function ChordsTab({ octave, onOctaveChange, playNote, keyboardActiveKeys = new 
       if (index > 0 && noteIndex <= lastNoteIndex) {
         currentOctaveOffset++;
       }
-      octaves.push(octave - 1 + currentOctaveOffset);
+      octaves.push(octave + currentOctaveOffset);
       lastNoteIndex = noteIndex;
     });
 

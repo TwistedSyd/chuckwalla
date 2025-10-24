@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import HomePage from './components/HomePage';
 import Navigation from './components/Navigation';
 import MIDIStatus from './components/MIDIStatus';
@@ -28,6 +28,7 @@ function App() {
   const [octaveTheory, setOctaveTheory] = useState(4);
   const [showNoteLabels, setShowNoteLabels] = useState(true);
   const [pressedKeys, setPressedKeys] = useState(new Set());
+  const [midiActiveKeys, setMidiActiveKeys] = useState(new Set());
 
   // Convert pressed keyboard keys to piano key IDs for visual feedback
   const keyboardActiveKeys = useMemo(() => {
@@ -37,13 +38,20 @@ function App() {
         const note = keyMap[key.toLowerCase()];
         if (note) {
           const octaveOffset = getOctaveOffset(key);
-          const noteOctave = octavePlay - 1 + octaveOffset;
+          // Use the appropriate octave based on current tab
+          const currentOctave = (currentTab === 'chords' || currentTab === 'scales') ? octaveTheory : octavePlay;
+          const noteOctave = currentOctave - 1 + octaveOffset;
           activeSet.add(`${note}${noteOctave}`);
         }
       });
     }
     return activeSet;
-  }, [pressedKeys, octavePlay]);
+  }, [pressedKeys, octavePlay, octaveTheory, currentTab]);
+
+  // Combine keyboard and MIDI active keys for visual feedback
+  const allActiveKeys = useMemo(() => {
+    return new Set([...keyboardActiveKeys, ...midiActiveKeys]);
+  }, [keyboardActiveKeys, midiActiveKeys]);
 
   const {
     playNote,
@@ -52,19 +60,38 @@ function App() {
     chorusEnabled,
     toggleChorus,
     reverbEnabled,
-    toggleReverb
+    toggleReverb,
+    audioContextRef,
+    ensureAudioReady
   } = useAudio();
 
   // MIDI support
-  const handleMIDINoteOn = (note, octave) => {
+  const handleMIDINoteOn = async (note, octave) => {
+    // Try to resume AudioContext if suspended (even though MIDI isn't a user gesture)
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      try {
+        await audioContextRef.current.resume();
+        console.log('🎵 AudioContext resumed via MIDI event');
+      } catch (err) {
+        console.warn('Could not resume AudioContext via MIDI:', err);
+      }
+    }
+
     playNote(note, octave, 2);
+    // Add visual feedback for MIDI notes
+    setMidiActiveKeys(prev => new Set([...prev, `${note}${octave}`]));
   };
 
-  const handleMIDINoteOff = () => {
-    // Note off handled by audio hook
+  const handleMIDINoteOff = (note, octave) => {
+    // Remove visual feedback when MIDI note is released
+    setMidiActiveKeys(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(`${note}${octave}`);
+      return newSet;
+    });
   };
 
-  const { midiConnected, midiDeviceName } = useMIDI(handleMIDINoteOn, handleMIDINoteOff);
+  const { midiConnected, midiDeviceName, midiError } = useMIDI(handleMIDINoteOn, handleMIDINoteOff, audioContextRef);
 
   // Handle navigation and update URL
   const navigateToPage = (page) => {
@@ -97,11 +124,21 @@ function App() {
   // Use ref to track pressed keys within the effect to avoid recreating listeners
   const pressedKeysRef = useRef(new Set());
   const octavePlayRef = useRef(octavePlay);
+  const octaveTheoryRef = useRef(octaveTheory);
+  const currentTabRef = useRef(currentTab);
 
   // Keep refs in sync
   useEffect(() => {
     octavePlayRef.current = octavePlay;
   }, [octavePlay]);
+
+  useEffect(() => {
+    octaveTheoryRef.current = octaveTheory;
+  }, [octaveTheory]);
+
+  useEffect(() => {
+    currentTabRef.current = currentTab;
+  }, [currentTab]);
 
   useEffect(() => {
     pressedKeysRef.current = pressedKeys;
@@ -113,10 +150,16 @@ function App() {
     if (currentPage !== 'home' && currentPage !== 'drums' && currentPage !== 'guitar' && currentPage !== 'circle-of-fifths') {
       const handleKeyDown = (e) => {
         const note = keyMap[e.key.toLowerCase()];
+
         if (note && !pressedKeysRef.current.has(e.key) && !e.repeat) {
           setPressedKeys(prev => new Set([...prev, e.key]));
           const octaveOffset = getOctaveOffset(e.key);
-          playNote(note, octavePlayRef.current - 1 + octaveOffset, 2);
+          // Use the appropriate octave based on current tab
+          const currentOctave = (currentTabRef.current === 'chords' || currentTabRef.current === 'scales')
+            ? octaveTheoryRef.current
+            : octavePlayRef.current;
+          // Don't await - let it play asynchronously
+          playNote(note, currentOctave - 1 + octaveOffset, 2);
         }
       };
 
@@ -188,7 +231,7 @@ function App() {
   return (
     <div className="app">
       <Navigation onBackHome={() => navigateToPage('home')} currentPage={currentPage} onNavigate={navigateToPage} />
-      <MIDIStatus connected={midiConnected} deviceName={midiDeviceName} />
+      <MIDIStatus connected={midiConnected} deviceName={midiDeviceName} error={midiError} audioContextRef={audioContextRef} />
 
       <div className="container">
         <h1>🎹 Piano</h1>
@@ -234,7 +277,9 @@ function App() {
             reverbEnabled={reverbEnabled}
             toggleReverb={toggleReverb}
             pressedKeys={pressedKeys}
-            keyboardActiveKeys={keyboardActiveKeys}
+            keyboardActiveKeys={allActiveKeys}
+            midiActiveKeys={midiActiveKeys}
+            ensureAudioReady={ensureAudioReady}
           />
         )}
 
@@ -243,7 +288,7 @@ function App() {
             octave={octaveTheory}
             onOctaveChange={changeOctaveTheory}
             playNote={playNote}
-            keyboardActiveKeys={keyboardActiveKeys}
+            keyboardActiveKeys={allActiveKeys}
           />
         )}
 
@@ -252,7 +297,7 @@ function App() {
             octave={octaveTheory}
             onOctaveChange={changeOctaveTheory}
             playNote={playNote}
-            keyboardActiveKeys={keyboardActiveKeys}
+            keyboardActiveKeys={allActiveKeys}
           />
         )}
 

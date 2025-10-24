@@ -87,16 +87,16 @@ export function getScalePattern(rootNote, scaleType, startFret = 0, endFret = 12
 
 // Get chord notes on fretboard from shape
 export function getChordNotes(chordShape) {
-  const notes = [];
+  const chordNotes = [];
   chordShape.frets.forEach((fret, stringIndex) => {
     if (fret >= 0) {
       const note = getNoteAtFret(stringIndex, fret);
-      notes.push({
+      chordNotes.push({
         string: stringIndex,
         fret,
         note
       });
     }
   });
-  return notes;
+  return chordNotes;
 }

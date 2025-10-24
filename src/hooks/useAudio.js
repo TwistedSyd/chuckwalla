@@ -13,24 +13,74 @@ export function useAudio() {
   const [reverbEnabled, setReverbEnabled] = useState(false);
   const masterVolume = 0.7;
 
-  // Initialize audio context and effects
+  const initAudioContext = async () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      createEffectNodes();
+    }
+    // Resume if suspended (happens due to browser autoplay policy)
+    if (audioContextRef.current.state === 'suspended') {
+      try {
+        await audioContextRef.current.resume();
+        console.log('AudioContext resumed successfully');
+      } catch (err) {
+        console.error('Failed to resume AudioContext:', err);
+      }
+    }
+    return audioContextRef.current;
+  };
+
+  // Initialize audio context immediately on mount (will be suspended until user interaction)
   useEffect(() => {
-    audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    // Create context immediately so it's ready for MIDI
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    audioContextRef.current = ctx;
     createEffectNodes();
 
+    console.log('AudioContext created on mount, state:', ctx.state);
+
+    // Add user interaction handlers to resume AudioContext
+    // Only listen for qualifying user gestures (click, keydown, touchstart)
+    const resumeAudio = async () => {
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        try {
+          await audioContextRef.current.resume();
+          console.log('✅ AudioContext resumed via user interaction');
+          // Remove all listeners once resumed successfully
+          document.removeEventListener('click', resumeAudio);
+          document.removeEventListener('keydown', resumeAudio);
+          document.removeEventListener('touchstart', resumeAudio);
+          document.removeEventListener('mousedown', resumeAudio);
+          // Note: The statechange event will notify any listeners (like MIDIStatus)
+        } catch (err) {
+          console.error('Failed to resume AudioContext:', err);
+        }
+      }
+    };
+
+    // Listen for qualifying user gestures on document
+    document.addEventListener('click', resumeAudio);
+    document.addEventListener('keydown', resumeAudio);
+    document.addEventListener('touchstart', resumeAudio);
+    document.addEventListener('mousedown', resumeAudio);
+
     return () => {
+      // Cleanup listeners if component unmounts
+      document.removeEventListener('click', resumeAudio);
+      document.removeEventListener('keydown', resumeAudio);
+      document.removeEventListener('touchstart', resumeAudio);
+      document.removeEventListener('mousedown', resumeAudio);
+
       if (audioContextRef.current) {
         audioContextRef.current.close();
       }
     };
   }, []);
 
-  // Create effect nodes
   const createEffectNodes = () => {
     const audioContext = audioContextRef.current;
     if (!audioContext) return;
 
-    // Chorus effect (using delay with LFO)
     const chorusDelay = audioContext.createDelay();
     const chorusLFO = audioContext.createOscillator();
     const chorusDepth = audioContext.createGain();
@@ -39,10 +89,28 @@ export function useAudio() {
     chorusDepth.gain.value = 0.01;
     chorusLFO.connect(chorusDepth);
     chorusDepth.connect(chorusDelay.delayTime);
-    chorusLFO.start();
+
+    // Only start the oscillator if the context is running
+    // Otherwise, start it when the context resumes
+    if (audioContext.state === 'running') {
+      chorusLFO.start();
+    } else {
+      // Start the oscillator once the context is resumed
+      const startOscillator = () => {
+        if (audioContext.state === 'running') {
+          try {
+            chorusLFO.start();
+          } catch (e) {
+            // Already started, ignore
+          }
+          audioContext.removeEventListener('statechange', startOscillator);
+        }
+      };
+      audioContext.addEventListener('statechange', startOscillator);
+    }
+
     effectsRef.current.chorus.node = { delay: chorusDelay, lfo: chorusLFO, depth: chorusDepth };
 
-    // Reverb effect (using convolver with synthetic impulse response)
     const reverbNode = audioContext.createConvolver();
     const reverbTime = 2;
     const sampleRate = audioContext.sampleRate;
@@ -58,56 +126,70 @@ export function useAudio() {
     effectsRef.current.reverb.node = reverbNode;
   };
 
-  // Play a single note
-  const playNote = useCallback((note, octave, duration = 1) => {
+  const ensureAudioReady = async () => {
+    const audioContext = audioContextRef.current;
+    if (!audioContext) return;
+    if (audioContext.state === 'suspended') {
+      try {
+        await audioContext.resume();
+        console.log('AudioContext preemptively resumed');
+      } catch (err) {
+        console.error('Failed to resume AudioContext:', err);
+      }
+    }
+  };
+
+  const playNote = useCallback(async (note, octave, duration = 1) => {
+    const audioContext = audioContextRef.current;
+    if (!audioContext) return;
+
+    // Ensure AudioContext is running before playing
+    await ensureAudioReady();
+    if (audioContext.state !== 'running') return;
+
+    playNoteImmediately(note, octave, duration);
+  }, [sustainEnabled, chorusEnabled, reverbEnabled]);
+
+  const playNoteImmediately = (note, octave, duration) => {
     const audioContext = audioContextRef.current;
     if (!audioContext) return;
 
     const frequency = getNoteFrequency(note, octave);
 
-    // Create main oscillator with triangle wave for brighter sound
     const osc1 = audioContext.createOscillator();
     const gain1 = audioContext.createGain();
     osc1.type = 'triangle';
     osc1.frequency.value = frequency;
     gain1.gain.value = 0.6;
 
-    // Create second oscillator for additional harmonics
     const osc2 = audioContext.createOscillator();
     const gain2 = audioContext.createGain();
     osc2.type = 'sine';
-    osc2.frequency.value = frequency * 2; // One octave higher
+    osc2.frequency.value = frequency * 2;
     gain2.gain.value = 0.15;
 
-    // Add a high-pass filter to brighten the sound
     const filter = audioContext.createBiquadFilter();
     filter.type = 'highpass';
     filter.frequency.value = 200;
     filter.Q.value = 0.5;
 
-    // Main gain envelope
     const gain = audioContext.createGain();
     const adjustedVolume = 0.3 * masterVolume;
-    const sustainDuration = sustainEnabled ? duration * 1.2 : duration * 0.6; // Reduced sustain
+    const sustainDuration = sustainEnabled ? duration * 1.2 : duration * 0.6;
 
     gain.gain.setValueAtTime(adjustedVolume, audioContext.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + sustainDuration);
 
-    // Connect oscillators to their gains
     osc1.connect(gain1);
     osc2.connect(gain2);
 
-    // Merge oscillators
     gain1.connect(filter);
     gain2.connect(filter);
 
-    // Connect filter to main gain
     filter.connect(gain);
 
-    // Build effects chain
     let currentNode = gain;
 
-    // Apply chorus effect if enabled
     if (chorusEnabled && effectsRef.current.chorus.node) {
       const dryGain = audioContext.createGain();
       const wetGain = audioContext.createGain();
@@ -123,7 +205,6 @@ export function useAudio() {
       wetGain.connect(merger);
       currentNode = merger;
     }
-    // Apply reverb effect if enabled
     else if (reverbEnabled && effectsRef.current.reverb.node) {
       const dryGain = audioContext.createGain();
       const wetGain = audioContext.createGain();
@@ -140,7 +221,6 @@ export function useAudio() {
       currentNode = merger;
     }
 
-    // Connect to destination
     currentNode.connect(audioContext.destination);
 
     osc1.start(audioContext.currentTime);
@@ -148,7 +228,6 @@ export function useAudio() {
     osc2.start(audioContext.currentTime);
     osc2.stop(audioContext.currentTime + sustainDuration);
 
-    // CRITICAL FIX: Dispose of audio nodes after they finish to prevent memory leaks
     const cleanup = () => {
       try {
         osc1.disconnect();
@@ -158,17 +237,14 @@ export function useAudio() {
         filter.disconnect();
         gain.disconnect();
       } catch (e) {
-        // Nodes may already be disconnected
       }
     };
 
-    // Schedule cleanup slightly after the note finishes
     setTimeout(cleanup, (sustainDuration + 0.1) * 1000);
 
     return { osc: osc1, gain };
-  }, [sustainEnabled, chorusEnabled, reverbEnabled]);
+  };
 
-  // Toggle effects
   const toggleChorus = () => {
     setChorusEnabled(!chorusEnabled);
     if (reverbEnabled) setReverbEnabled(false);
@@ -186,6 +262,8 @@ export function useAudio() {
     chorusEnabled,
     toggleChorus,
     reverbEnabled,
-    toggleReverb
+    toggleReverb,
+    audioContextRef,
+    ensureAudioReady
   };
 }

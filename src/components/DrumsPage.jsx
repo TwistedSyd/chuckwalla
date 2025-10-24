@@ -4,7 +4,6 @@ import './DrumsPage.css';
 
 const STEPS = 16;
 
-// Drum patterns from the original
 const patterns = [
   { name: "1. Basic Rock Beat", kick: [0, 4, 8, 12], snare: [4, 12], clap: [], hihat: [0, 2, 4, 6, 8, 10, 12, 14], cymbal: [] },
   { name: "2. Four on the Floor", kick: [0, 4, 8, 12], snare: [4, 12], clap: [], hihat: [2, 6, 10, 14], cymbal: [0] },
@@ -33,7 +32,6 @@ const edmPatterns = [
 
 const instruments = ['kick', 'snare', 'clap', 'hihat', 'cymbal', 'tom', 'rim', 'shaker', 'perc'];
 
-// Memoized PatternGrid component to prevent unnecessary re-renders
 const PatternGrid = memo(function PatternGrid({ pattern, isEditor, isPlaying, currentStep, onCellClick }) {
   const availableInstruments = instruments.filter(inst => pattern[inst]);
 
@@ -100,6 +98,19 @@ function DrumsPage() {
     return audioContextRef.current;
   };
 
+  // Proactively resume audio context on any interaction
+  const ensureAudioReady = async () => {
+    const ctx = initAudioContext();
+    if (ctx.state === 'suspended') {
+      try {
+        await ctx.resume();
+        console.log('AudioContext preemptively resumed');
+      } catch (err) {
+        console.error('Failed to resume AudioContext:', err);
+      }
+    }
+  };
+
   // Audio synthesis functions
   const createKickDrum = () => {
     const ctx = audioContextRef.current;
@@ -107,28 +118,33 @@ function DrumsPage() {
     const gain = ctx.createGain();
     const filter = ctx.createBiquadFilter();
 
+    // Schedule slightly in the future for more reliable playback
+    const now = ctx.currentTime + 0.01;
+
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(150, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.1);
-    osc.frequency.exponentialRampToValueAtTime(20, ctx.currentTime + 0.3);
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+    osc.frequency.exponentialRampToValueAtTime(20, now + 0.3);
 
     filter.type = 'lowpass';
     filter.frequency.value = 200;
     filter.Q.value = 1;
 
-    gain.gain.setValueAtTime(1.2, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    gain.gain.setValueAtTime(1.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
 
     osc.connect(filter);
     filter.connect(gain);
     gain.connect(ctx.destination);
 
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.3);
+    osc.start(now);
+    osc.stop(now + 0.3);
   };
 
   const createSnare = () => {
     const ctx = audioContextRef.current;
+    const now = ctx.currentTime + 0.01;
+
     // White noise
     const noise = ctx.createBufferSource();
     const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate);
@@ -143,17 +159,17 @@ function DrumsPage() {
     noiseFilter.frequency.value = 1000;
 
     const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.8, ctx.currentTime);
-    noiseGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+    noiseGain.gain.setValueAtTime(0.8, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
 
     // Tone component
     const osc = ctx.createOscillator();
     const oscGain = ctx.createGain();
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(180, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.1);
-    oscGain.gain.setValueAtTime(0.5, ctx.currentTime);
-    oscGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.exponentialRampToValueAtTime(150, now + 0.1);
+    oscGain.gain.setValueAtTime(0.5, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
 
     noise.connect(noiseFilter);
     noiseFilter.connect(noiseGain);
@@ -161,14 +177,16 @@ function DrumsPage() {
     osc.connect(oscGain);
     oscGain.connect(ctx.destination);
 
-    noise.start(ctx.currentTime);
-    osc.start(ctx.currentTime);
-    noise.stop(ctx.currentTime + 0.15);
-    osc.stop(ctx.currentTime + 0.1);
+    noise.start(now);
+    osc.start(now);
+    noise.stop(now + 0.15);
+    osc.stop(now + 0.1);
   };
 
   const createClap = () => {
     const ctx = audioContextRef.current;
+    const now = ctx.currentTime + 0.01;
+
     for (let i = 0; i < 3; i++) {
       const delay = i * 0.01;
       const noise = ctx.createBufferSource();
@@ -185,19 +203,20 @@ function DrumsPage() {
       filter.Q.value = 1;
 
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.4, ctx.currentTime + delay);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.05);
+      gain.gain.setValueAtTime(0.4, now + delay);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.05);
 
       noise.connect(filter);
       filter.connect(gain);
       gain.connect(ctx.destination);
-      noise.start(ctx.currentTime + delay);
-      noise.stop(ctx.currentTime + delay + 0.05);
+      noise.start(now + delay);
+      noise.stop(now + delay + 0.05);
     }
   };
 
   const createHiHat = () => {
     const ctx = audioContextRef.current;
+    const now = ctx.currentTime + 0.01;
     const freqs = [296, 285, 365, 445, 540, 630];
     const gain = ctx.createGain();
 
@@ -206,16 +225,16 @@ function DrumsPage() {
       osc.type = 'square';
       osc.frequency.value = freq;
       osc.connect(gain);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.04);
+      osc.start(now);
+      osc.stop(now + 0.04);
     });
 
     const filter = ctx.createBiquadFilter();
     filter.type = 'highpass';
     filter.frequency.value = 7000;
 
-    gain.gain.setValueAtTime(0.15, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.04);
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.04);
 
     gain.connect(filter);
     filter.connect(ctx.destination);
@@ -223,6 +242,7 @@ function DrumsPage() {
 
   const createCymbal = () => {
     const ctx = audioContextRef.current;
+    const now = ctx.currentTime + 0.01;
     const freqs = [296, 285, 365, 445, 540, 630];
     const gain = ctx.createGain();
 
@@ -231,16 +251,16 @@ function DrumsPage() {
       osc.type = 'square';
       osc.frequency.value = freq;
       osc.connect(gain);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.5);
+      osc.start(now);
+      osc.stop(now + 0.5);
     });
 
     const filter = ctx.createBiquadFilter();
     filter.type = 'highpass';
     filter.frequency.value = 7000;
 
-    gain.gain.setValueAtTime(0.15, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
 
     gain.connect(filter);
     filter.connect(ctx.destination);
@@ -248,24 +268,26 @@ function DrumsPage() {
 
   const createTom = () => {
     const ctx = audioContextRef.current;
+    const now = ctx.currentTime + 0.01;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(130, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.2);
+    osc.frequency.setValueAtTime(130, now);
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.2);
 
-    gain.gain.setValueAtTime(0.8, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.8, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.2);
+    osc.start(now);
+    osc.stop(now + 0.2);
   };
 
   const createRimshot = () => {
     const ctx = audioContextRef.current;
+    const now = ctx.currentTime + 0.01;
     const osc1 = ctx.createOscillator();
     const osc2 = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -280,22 +302,23 @@ function DrumsPage() {
     filter.frequency.value = 1100;
     filter.Q.value = 2;
 
-    gain.gain.setValueAtTime(0.6, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.6, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
 
     osc1.connect(filter);
     osc2.connect(filter);
     filter.connect(gain);
     gain.connect(ctx.destination);
 
-    osc1.start(ctx.currentTime);
-    osc2.start(ctx.currentTime);
-    osc1.stop(ctx.currentTime + 0.08);
-    osc2.stop(ctx.currentTime + 0.08);
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.08);
+    osc2.stop(now + 0.08);
   };
 
   const createShaker = () => {
     const ctx = audioContextRef.current;
+    const now = ctx.currentTime + 0.01;
     const noise = ctx.createBufferSource();
     const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
     const output = noiseBuffer.getChannelData(0);
@@ -309,38 +332,42 @@ function DrumsPage() {
     filter.frequency.value = 4000;
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
 
     noise.connect(filter);
     filter.connect(gain);
     gain.connect(ctx.destination);
-    noise.start(ctx.currentTime);
-    noise.stop(ctx.currentTime + 0.08);
+    noise.start(now);
+    noise.stop(now + 0.08);
   };
 
   const createPerc = () => {
     const ctx = audioContextRef.current;
+    const now = ctx.currentTime + 0.01;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(400, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.05);
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.exponentialRampToValueAtTime(200, now + 0.05);
 
-    gain.gain.setValueAtTime(0.4, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+    gain.gain.setValueAtTime(0.4, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.05);
+    osc.start(now);
+    osc.stop(now + 0.05);
   };
 
-  const playSound = async (instrument) => {
-    const ctx = initAudioContext();
-    if (ctx.state === 'suspended') {
-      await ctx.resume();
+  const playSound = (instrument) => {
+    const ctx = audioContextRef.current;
+    if (!ctx) return;
+
+    // Log state for debugging
+    if (ctx.state !== 'running') {
+      console.warn('⚠️ Trying to play sound while AudioContext is:', ctx.state);
     }
 
     switch(instrument) {
@@ -357,26 +384,21 @@ function DrumsPage() {
   };
 
   // Pattern playback
-  const playPattern = (pattern, isEditor = false) => {
+  const playPattern = async (pattern, isEditor = false) => {
     stopPattern();
-    setPlayingPattern(pattern);
-    setIsPlayingEditor(isEditor);
-    setCurrentStep(0);
 
-    // Play the first step immediately - always use the pattern parameter
-    // because it has the current data at the time playPattern is called
+    // FIRST: Ensure audio is ready
     const ctx = initAudioContext();
     if (ctx.state === 'suspended') {
-      ctx.resume();
+      console.log('🔊 AudioContext suspended, resuming...');
+      await ctx.resume();
+      console.log('🔊 AudioContext resumed, state:', ctx.state);
+      // Wait for audio to actually be ready (increased from 50ms to 100ms)
+      await new Promise(resolve => setTimeout(resolve, 100));
+      console.log('🔊 AudioContext after wait, state:', ctx.state);
     }
 
-    instruments.forEach(inst => {
-      if (pattern[inst] && pattern[inst].includes(0)) {
-        playSound(inst);
-      }
-    });
-
-    // Update the ref immediately so the interval has the latest data
+    // Update the refs FIRST before setting state
     if (isEditor) {
       editorPatternRef.current = pattern;
       isPlayingEditorRef.current = true;
@@ -384,6 +406,22 @@ function DrumsPage() {
       playingPatternRef.current = pattern;
       isPlayingEditorRef.current = false;
     }
+
+    // Play step 0 immediately now that audio is ready
+    console.log('🥁 Playing step 0 immediately, AudioContext state:', ctx.state);
+    instruments.forEach(inst => {
+      if (pattern[inst] && pattern[inst].includes(0)) {
+        console.log('  Playing instrument:', inst);
+        playSound(inst);
+      }
+    });
+
+    // Start at step 0
+    setCurrentStep(0);
+
+    // Set the playing pattern which will trigger the useEffect to start the interval
+    setPlayingPattern(pattern);
+    setIsPlayingEditor(isEditor);
   };
 
   const stopPattern = () => {
@@ -422,10 +460,10 @@ function DrumsPage() {
   useEffect(() => {
     if (playingPattern) {
       const stepTime = (60 / tempo) * 1000 / 4;
+
       intervalRef.current = setInterval(() => {
         setCurrentStep(prev => {
           const next = (prev + 1) % STEPS;
-          // Play sounds for this step - use refs to get current pattern state
           const patternToPlay = isPlayingEditorRef.current ? editorPatternRef.current : playingPatternRef.current;
 
           instruments.forEach(inst => {
@@ -625,6 +663,7 @@ function DrumsPage() {
                   <div className="pattern-title">Click cells to add/remove notes</div>
                   <button
                     className={`play-button ${isPlayingEditor ? 'playing' : ''}`}
+                    onMouseEnter={ensureAudioReady}
                     onClick={() => isPlayingEditor ? stopPattern() : playPattern(editorPattern, true)}
                   >
                     {isPlayingEditor ? '⏹ Stop' : '▶ Play'}
@@ -652,6 +691,7 @@ function DrumsPage() {
                       <div style={{ display: 'flex', gap: '5px' }}>
                         <button
                           className={`play-button ${playingPattern === pattern ? 'playing' : ''}`}
+                          onMouseEnter={ensureAudioReady}
                           onClick={() => playingPattern === pattern ? stopPattern() : playPattern(pattern)}
                         >
                           {playingPattern === pattern ? '⏹ Stop' : '▶ Play'}
@@ -722,6 +762,7 @@ function DrumsPage() {
                       <div style={{ display: 'flex', gap: '5px' }}>
                         <button
                           className={`play-button ${playingPattern === pattern ? 'playing' : ''}`}
+                          onMouseEnter={ensureAudioReady}
                           onClick={() => playingPattern === pattern ? stopPattern() : playPattern(pattern)}
                         >
                           {playingPattern === pattern ? '⏹ Stop' : '▶ Play'}
