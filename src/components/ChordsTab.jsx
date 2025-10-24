@@ -9,6 +9,18 @@ function ChordsTab({ octave, onOctaveChange, playNote, keyboardActiveKeys = new 
   const [chordInfo, setChordInfo] = useState({ intervals: [], formula: '' });
   const [activeKeys, setActiveKeys] = useState(new Set());
   const activeKeysTimeoutRef = useRef(null);
+  const arpeggioTimeoutsRef = useRef([]);
+
+  // Cleanup all timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (activeKeysTimeoutRef.current) {
+        clearTimeout(activeKeysTimeoutRef.current);
+      }
+      arpeggioTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+      arpeggioTimeoutsRef.current = [];
+    };
+  }, []);
 
   // Calculate chord notes whenever root or type changes
   useEffect(() => {
@@ -80,13 +92,15 @@ function ChordsTab({ octave, onOctaveChange, playNote, keyboardActiveKeys = new 
       lastNoteIndex = noteIndex;
     });
 
-    // Clear any existing timeout
+    // Clear any existing timeouts
     if (activeKeysTimeoutRef.current) {
       clearTimeout(activeKeysTimeoutRef.current);
     }
+    arpeggioTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+    arpeggioTimeoutsRef.current = [];
 
     chordNotes.forEach((note, index) => {
-      setTimeout(() => {
+      const timeout1 = setTimeout(() => {
         // Light up current key
         const keyId = `${note}${octaves[index]}`;
         setActiveKeys(new Set([keyId]));
@@ -94,10 +108,12 @@ function ChordsTab({ octave, onOctaveChange, playNote, keyboardActiveKeys = new 
         playNote(note, octaves[index], 0.5);
 
         // Clear key after 500ms
-        setTimeout(() => {
+        const timeout2 = setTimeout(() => {
           setActiveKeys(new Set());
         }, 500);
+        arpeggioTimeoutsRef.current.push(timeout2);
       }, index * 300);
+      arpeggioTimeoutsRef.current.push(timeout1);
     });
   };
 

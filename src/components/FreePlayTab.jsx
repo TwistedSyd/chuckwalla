@@ -7,6 +7,14 @@ function FreePlayTab({ octave, onOctaveChange, playNote, sustainEnabled, setSust
   const [chordInfo, setChordInfo] = useState({ name: '-', notes: 'Play some keys to see the chord' });
   const noteTimeoutsRef = useRef(new Map());
 
+  // Cleanup all timeouts on unmount
+  useEffect(() => {
+    return () => {
+      noteTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+      noteTimeoutsRef.current.clear();
+    };
+  }, []);
+
   // Get notes from keyboard presses
   const keyboardNotes = useMemo(() => {
     const noteSet = new Set();

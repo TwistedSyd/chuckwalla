@@ -6,6 +6,14 @@ export function useMIDI(onNoteOn, onNoteOff) {
   const [midiConnected, setMidiConnected] = useState(false);
   const [midiDeviceName, setMidiDeviceName] = useState('');
   const activeMidiNotesRef = useRef(new Map());
+  const onNoteOnRef = useRef(onNoteOn);
+  const onNoteOffRef = useRef(onNoteOff);
+
+  // Keep refs up to date
+  useEffect(() => {
+    onNoteOnRef.current = onNoteOn;
+    onNoteOffRef.current = onNoteOff;
+  }, [onNoteOn, onNoteOff]);
 
   // Convert MIDI note number to note name and octave
   const midiNoteToNoteAndOctave = (midiNote) => {
@@ -33,7 +41,7 @@ export function useMIDI(onNoteOn, onNoteOff) {
         input.addListener('noteon', (e) => {
           const midiNote = e.note.number;
           const { note: noteName, octave } = midiNoteToNoteAndOctave(midiNote);
-          onNoteOn?.(noteName, octave);
+          onNoteOnRef.current?.(noteName, octave);
           activeMidiNotesRef.current.set(midiNote, octave);
         });
 
@@ -43,7 +51,7 @@ export function useMIDI(onNoteOn, onNoteOff) {
           const { note: noteName, octave } = midiNoteToNoteAndOctave(midiNote);
           const storedOctave = activeMidiNotesRef.current.get(midiNote);
           if (storedOctave !== undefined) {
-            onNoteOff?.(noteName, storedOctave);
+            onNoteOffRef.current?.(noteName, storedOctave);
             activeMidiNotesRef.current.delete(midiNote);
           }
         });

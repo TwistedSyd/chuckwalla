@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import HomePage from './components/HomePage';
 import Navigation from './components/Navigation';
 import MIDIStatus from './components/MIDIStatus';
@@ -94,16 +94,29 @@ function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, [currentPage]);
 
+  // Use ref to track pressed keys within the effect to avoid recreating listeners
+  const pressedKeysRef = useRef(new Set());
+  const octavePlayRef = useRef(octavePlay);
+
+  // Keep refs in sync
+  useEffect(() => {
+    octavePlayRef.current = octavePlay;
+  }, [octavePlay]);
+
+  useEffect(() => {
+    pressedKeysRef.current = pressedKeys;
+  }, [pressedKeys]);
+
   // Keyboard event handlers - only for piano page
   useEffect(() => {
     // Only enable keyboard controls when NOT on home, drums, guitar, or circle-of-fifths pages
     if (currentPage !== 'home' && currentPage !== 'drums' && currentPage !== 'guitar' && currentPage !== 'circle-of-fifths') {
       const handleKeyDown = (e) => {
         const note = keyMap[e.key.toLowerCase()];
-        if (note && !pressedKeys.has(e.key) && !e.repeat) {
+        if (note && !pressedKeysRef.current.has(e.key) && !e.repeat) {
           setPressedKeys(prev => new Set([...prev, e.key]));
           const octaveOffset = getOctaveOffset(e.key);
-          playNote(note, octavePlay - 1 + octaveOffset, 2);
+          playNote(note, octavePlayRef.current - 1 + octaveOffset, 2);
         }
       };
 
@@ -126,7 +139,7 @@ function App() {
         window.removeEventListener('keyup', handleKeyUp);
       };
     }
-  }, [octavePlay, playNote, pressedKeys, currentPage]);
+  }, [playNote, currentPage]);
 
   const changeOctavePlay = (delta) => {
     setOctavePlay(prev => Math.max(2, Math.min(6, prev + delta)));

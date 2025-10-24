@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { getNoteFrequency } from '../data/musicTheory';
 
 export function useAudio() {
@@ -59,7 +59,7 @@ export function useAudio() {
   };
 
   // Play a single note
-  const playNote = (note, octave, duration = 1) => {
+  const playNote = useCallback((note, octave, duration = 1) => {
     const audioContext = audioContextRef.current;
     if (!audioContext) return;
 
@@ -148,8 +148,25 @@ export function useAudio() {
     osc2.start(audioContext.currentTime);
     osc2.stop(audioContext.currentTime + sustainDuration);
 
+    // CRITICAL FIX: Dispose of audio nodes after they finish to prevent memory leaks
+    const cleanup = () => {
+      try {
+        osc1.disconnect();
+        osc2.disconnect();
+        gain1.disconnect();
+        gain2.disconnect();
+        filter.disconnect();
+        gain.disconnect();
+      } catch (e) {
+        // Nodes may already be disconnected
+      }
+    };
+
+    // Schedule cleanup slightly after the note finishes
+    setTimeout(cleanup, (sustainDuration + 0.1) * 1000);
+
     return { osc: osc1, gain };
-  };
+  }, [sustainEnabled, chorusEnabled, reverbEnabled]);
 
   // Toggle effects
   const toggleChorus = () => {

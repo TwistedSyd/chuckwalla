@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { notes, keyMap, firstOctaveKeys } from '../data/musicTheory';
 import './PianoKeyboard.css';
 
-function PianoKeyboard({
+const PianoKeyboard = memo(function PianoKeyboard({
   octave,
   onNotePlay,
   highlightedNotes = [],
@@ -125,6 +125,6 @@ function PianoKeyboard({
       {renderKey('C', octave + 1)}
     </div>
   );
-}
+});
 
 export default PianoKeyboard;
