@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo, useCallback } from 'react';
 import DrumRoadmap from './DrumRoadmap';
 import './DrumsPage.css';
 
@@ -33,6 +33,39 @@ const edmPatterns = [
 
 const instruments = ['kick', 'snare', 'clap', 'hihat', 'cymbal', 'tom', 'rim', 'shaker', 'perc'];
 
+// Memoized PatternGrid component to prevent unnecessary re-renders
+const PatternGrid = memo(function PatternGrid({ pattern, isEditor, isPlaying, currentStep, onCellClick }) {
+  const availableInstruments = instruments.filter(inst => pattern[inst]);
+
+  return (
+    <div className="midi-grid">
+      {availableInstruments.map(inst => (
+        <div key={`row-${inst}`} style={{ display: 'contents' }}>
+          <div className={`instrument-label ${inst}`}>
+            {inst.toUpperCase()}
+          </div>
+          {Array.from({ length: STEPS }).map((_, i) => (
+            <div
+              key={`${inst}-${i}`}
+              className={`grid-cell ${inst} ${pattern[inst].includes(i) ? 'active' : ''} ${
+                isPlaying && currentStep === i ? 'playing' : ''
+              } ${isEditor ? 'editable' : ''}`}
+              onMouseDown={isEditor ? (e) => {
+                e.preventDefault();
+                onCellClick(inst, i);
+              } : undefined}
+            >
+              {(i === 0 || i === 4 || i === 8 || i === 12) && (
+                <div className="beat-marker">{(i / 4) + 1}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+});
+
 function DrumsPage() {
   const [currentTab, setCurrentTab] = useState(() => {
     return localStorage.getItem('drumsCurrentTab') || 'patterns';
@@ -48,11 +81,16 @@ function DrumsPage() {
   const [editorName, setEditorName] = useState('My Custom Beat');
   const [userPatterns, setUserPatterns] = useState([]);
   const [playingPattern, setPlayingPattern] = useState(null);
+  const [isPlayingEditor, setIsPlayingEditor] = useState(false); // Track if editor is playing
   const [currentStep, setCurrentStep] = useState(0);
   const [tapTimes, setTapTimes] = useState([]);
 
   const audioContextRef = useRef(null);
   const intervalRef = useRef(null);
+  const editorPatternRef = useRef(editorPattern);
+  const playingPatternRef = useRef(playingPattern);
+  const isPlayingEditorRef = useRef(isPlayingEditor);
+  const currentStepRef = useRef(currentStep);
 
   // Initialize audio context
   const initAudioContext = () => {
@@ -231,23 +269,29 @@ function DrumsPage() {
     const osc1 = ctx.createOscillator();
     const osc2 = ctx.createOscillator();
     const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
 
     osc1.type = 'square';
     osc2.type = 'square';
     osc1.frequency.value = 1000;
     osc2.frequency.value = 1200;
 
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.02);
+    filter.type = 'bandpass';
+    filter.frequency.value = 1100;
+    filter.Q.value = 2;
 
-    osc1.connect(gain);
-    osc2.connect(gain);
+    gain.gain.setValueAtTime(0.6, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
     gain.connect(ctx.destination);
 
     osc1.start(ctx.currentTime);
     osc2.start(ctx.currentTime);
-    osc1.stop(ctx.currentTime + 0.02);
-    osc2.stop(ctx.currentTime + 0.02);
+    osc1.stop(ctx.currentTime + 0.08);
+    osc2.stop(ctx.currentTime + 0.08);
   };
 
   const createShaker = () => {
@@ -313,25 +357,38 @@ function DrumsPage() {
   };
 
   // Pattern playback
-  const playPattern = (pattern) => {
+  const playPattern = (pattern, isEditor = false) => {
     stopPattern();
     setPlayingPattern(pattern);
+    setIsPlayingEditor(isEditor);
     setCurrentStep(0);
 
-    // Play the first step immediately
+    // Play the first step immediately - always use the pattern parameter
+    // because it has the current data at the time playPattern is called
     const ctx = initAudioContext();
     if (ctx.state === 'suspended') {
       ctx.resume();
     }
+
     instruments.forEach(inst => {
       if (pattern[inst] && pattern[inst].includes(0)) {
         playSound(inst);
       }
     });
+
+    // Update the ref immediately so the interval has the latest data
+    if (isEditor) {
+      editorPatternRef.current = pattern;
+      isPlayingEditorRef.current = true;
+    } else {
+      playingPatternRef.current = pattern;
+      isPlayingEditorRef.current = false;
+    }
   };
 
   const stopPattern = () => {
     setPlayingPattern(null);
+    setIsPlayingEditor(false);
     setCurrentStep(0);
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -344,15 +401,35 @@ function DrumsPage() {
     localStorage.setItem('drumsCurrentTab', currentTab);
   }, [currentTab]);
 
+  // Keep refs in sync with state
+  useEffect(() => {
+    editorPatternRef.current = editorPattern;
+  }, [editorPattern]);
+
+  useEffect(() => {
+    playingPatternRef.current = playingPattern;
+  }, [playingPattern]);
+
+  useEffect(() => {
+    isPlayingEditorRef.current = isPlayingEditor;
+  }, [isPlayingEditor]);
+
+  useEffect(() => {
+    currentStepRef.current = currentStep;
+  }, [currentStep]);
+
+  // Playback loop - only restart when playingPattern, tempo, or isPlayingEditor changes
   useEffect(() => {
     if (playingPattern) {
       const stepTime = (60 / tempo) * 1000 / 4;
       intervalRef.current = setInterval(() => {
         setCurrentStep(prev => {
           const next = (prev + 1) % STEPS;
-          // Play sounds for this step
+          // Play sounds for this step - use refs to get current pattern state
+          const patternToPlay = isPlayingEditorRef.current ? editorPatternRef.current : playingPatternRef.current;
+
           instruments.forEach(inst => {
-            if (playingPattern[inst] && playingPattern[inst].includes(next)) {
+            if (patternToPlay[inst] && patternToPlay[inst].includes(next)) {
               playSound(inst);
             }
           });
@@ -366,7 +443,7 @@ function DrumsPage() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [playingPattern, tempo]);
+  }, [playingPattern, tempo, isPlayingEditor]);
 
   const copyPatternToEditor = (pattern) => {
     const newPattern = {};
@@ -381,22 +458,24 @@ function DrumsPage() {
     }, 100);
   };
 
-  const toggleEditorCell = (inst, step) => {
+  const toggleEditorCell = useCallback((inst, step) => {
     setEditorPattern(prev => {
       const newPattern = { ...prev };
       const arr = [...newPattern[inst]];
       const index = arr.indexOf(step);
-      if (index > -1) {
+      const isRemoving = index > -1;
+
+      if (isRemoving) {
         arr.splice(index, 1);
       } else {
         arr.push(step);
         arr.sort((a, b) => a - b);
-        playSound(inst);
       }
       newPattern[inst] = arr;
+
       return newPattern;
     });
-  };
+  }, []); // No dependencies - uses refs instead
 
   const clearEditor = () => {
     if (confirm('Clear all notes from the editor?')) {
@@ -464,36 +543,6 @@ function DrumsPage() {
   const filteredPatterns = allPatterns.filter(p =>
     !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const PatternGrid = ({ pattern, isEditor = false }) => {
-    const availableInstruments = instruments.filter(inst => pattern[inst]);
-    const isPlaying = playingPattern === pattern;
-
-    return (
-      <div className="midi-grid">
-        {availableInstruments.map(inst => (
-          <>
-            <div key={`label-${inst}`} className={`instrument-label ${inst}`}>
-              {inst.toUpperCase()}
-            </div>
-            {Array.from({ length: STEPS }).map((_, i) => (
-              <div
-                key={`${inst}-${i}`}
-                className={`grid-cell ${inst} ${pattern[inst].includes(i) ? 'active' : ''} ${
-                  isPlaying && currentStep === i ? 'playing' : ''
-                } ${isEditor ? 'editable' : ''}`}
-                onClick={isEditor ? () => toggleEditorCell(inst, i) : undefined}
-              >
-                {(i === 0 || i === 4 || i === 8 || i === 12) && (
-                  <div className="beat-marker">{(i / 4) + 1}</div>
-                )}
-              </div>
-            ))}
-          </>
-        ))}
-      </div>
-    );
-  };
 
   return (
     <div className="container drums-page">
@@ -575,13 +624,19 @@ function DrumsPage() {
                 <div className="pattern-header">
                   <div className="pattern-title">Click cells to add/remove notes</div>
                   <button
-                    className={`play-button ${playingPattern === editorPattern ? 'playing' : ''}`}
-                    onClick={() => playingPattern === editorPattern ? stopPattern() : playPattern(editorPattern)}
+                    className={`play-button ${isPlayingEditor ? 'playing' : ''}`}
+                    onClick={() => isPlayingEditor ? stopPattern() : playPattern(editorPattern, true)}
                   >
-                    {playingPattern === editorPattern ? '⏹ Stop' : '▶ Play'}
+                    {isPlayingEditor ? '⏹ Stop' : '▶ Play'}
                   </button>
                 </div>
-                <PatternGrid pattern={editorPattern} isEditor={true} />
+                <PatternGrid
+                  pattern={editorPattern}
+                  isEditor={true}
+                  isPlaying={isPlayingEditor}
+                  currentStep={currentStep}
+                  onCellClick={toggleEditorCell}
+                />
               </div>
             </div>
           )}
@@ -617,7 +672,12 @@ function DrumsPage() {
                         </button>
                       </div>
                     </div>
-                    <PatternGrid pattern={pattern} />
+                    <PatternGrid
+                      pattern={pattern}
+                      isEditor={false}
+                      isPlaying={playingPattern === pattern}
+                      currentStep={currentStep}
+                    />
                   </div>
                 ))}
               </>
@@ -643,7 +703,12 @@ function DrumsPage() {
                     </button>
                   </div>
                 </div>
-                <PatternGrid pattern={pattern} />
+                <PatternGrid
+                  pattern={pattern}
+                  isEditor={false}
+                  isPlaying={playingPattern === pattern}
+                  currentStep={currentStep}
+                />
               </div>
             ))}
 
@@ -670,7 +735,12 @@ function DrumsPage() {
                         </button>
                       </div>
                     </div>
-                    <PatternGrid pattern={pattern} />
+                    <PatternGrid
+                      pattern={pattern}
+                      isEditor={false}
+                      isPlaying={playingPattern === pattern}
+                      currentStep={currentStep}
+                    />
                   </div>
                 ))}
               </>

@@ -661,15 +661,80 @@ function GuitarPage() {
                     className={`chord-button ${activeScaleChord === index ? 'active' : ''}`}
                     onClick={() => {
                       setActiveScaleChord(index);
-                      // Play the diatonic chord
-                      const intervals = quality === 'Maj' ? [0, 4, 7] : quality === 'min' ? [0, 3, 7] : quality === 'dim' ? [0, 3, 6] : [0, 4, 8];
-                      const rootIndex = notes.indexOf(degreeNote);
-                      intervals.forEach((interval, i) => {
+
+                      // Build diatonic chord from scale degrees (1st, 3rd, 5th)
+                      const chordRoot = theoryNotes[index]; // Root of THIS chord
+                      const chordNotes = [
+                        theoryNotes[index],                           // Root
+                        theoryNotes[(index + 2) % theoryNotes.length], // 3rd
+                        theoryNotes[(index + 4) % theoryNotes.length]  // 5th
+                      ];
+
+                      // Get the current box pattern (highlighted scale shape) with octave info
+                      const boxPattern = getScaleBoxPattern(scalePosition, scaleRoot, theoryNotes);
+                      const boxWithOctaves = boxPattern.map(pos => {
+                        const openNote = tunings[tuning][pos.string];
+                        const openNoteIndex = notes.indexOf(openNote);
+                        const octave = stringOctaves[pos.string] + Math.floor((openNoteIndex + pos.fret) / 12);
+                        return { ...pos, octave };
+                      });
+
+                      // STEP 1: Find the LOWEST root note in the box
+                      const allRoots = boxWithOctaves.filter(n => n.note === chordRoot);
+                      if (allRoots.length === 0) return;
+
+                      allRoots.sort((a, b) => {
+                        const pitchA = a.octave * 12 + notes.indexOf(a.note);
+                        const pitchB = b.octave * 12 + notes.indexOf(b.note);
+                        return pitchA - pitchB;
+                      });
+
+                      const bassRoot = allRoots[0]; // Lowest root
+                      const bassRootPitch = bassRoot.octave * 12 + notes.indexOf(bassRoot.note);
+
+                      // STEP 2: Build the chord starting from this root
+                      const voicingNotes = [bassRoot];
+
+                      // STEP 3: For the 3rd and 5th, find instances at or above the root pitch
+                      for (let i = 1; i < chordNotes.length; i++) {
+                        const chordNote = chordNotes[i];
+                        const candidates = boxWithOctaves.filter(n => {
+                          const pitch = n.octave * 12 + notes.indexOf(n.note);
+                          return n.note === chordNote && pitch >= bassRootPitch;
+                        });
+
+                        if (candidates.length > 0) {
+                          // Pick the lowest pitch candidate (closest to bass)
+                          candidates.sort((a, b) => {
+                            const pitchA = a.octave * 12 + notes.indexOf(a.note);
+                            const pitchB = b.octave * 12 + notes.indexOf(b.note);
+                            return pitchA - pitchB;
+                          });
+                          voicingNotes.push(candidates[0]);
+                        }
+                      }
+
+                      // Sort by pitch (root is already guaranteed to be lowest)
+                      voicingNotes.sort((a, b) => {
+                        const pitchA = a.octave * 12 + notes.indexOf(a.note);
+                        const pitchB = b.octave * 12 + notes.indexOf(b.note);
+                        return pitchA - pitchB;
+                      });
+
+                      // Light up the chord notes
+                      setActiveNotes(voicingNotes.map(v => ({ string: v.string, fret: v.fret })));
+
+                      // Play the voicing
+                      voicingNotes.forEach((note, i) => {
                         setTimeout(() => {
-                          const note = notes[(rootIndex + interval) % 12];
-                          playNote(note, 3, 1);
+                          playNote(note.note, note.octave, 1);
                         }, i * 100);
                       });
+
+                      // Clear active notes after playing
+                      setTimeout(() => {
+                        setActiveNotes([]);
+                      }, 1500);
                     }}
                   >
                     <div className="chord-name">{noteDisplay[degreeNote] || degreeNote}</div>

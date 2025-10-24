@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+
 const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const noteDisplay = {
   'C#': 'C♯', 'D#': 'D♯', 'F#': 'F♯', 'G#': 'G♯', 'A#': 'A♯'
@@ -21,6 +23,7 @@ function GuitarFretboard({
   activeNotes = []
 }) {
   const numFrets = 21;
+  const activeTouchesRef = useRef(new Map()); // Track which touch ID is on which note
 
   const getNoteAtFret = (stringIndex, fret) => {
     const openNote = tunings[tuning][stringIndex];
@@ -141,6 +144,36 @@ function GuitarFretboard({
                   xPos = leftPadding + (fretPositions[fret - 1] + fretPositions[fret]) / 2 - 19;
                 }
 
+                const noteKey = `${stringIndex}-${fret}`;
+
+                // Touch handlers for multi-touch support
+                const handleTouchStart = (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  // Track each new touch point
+                  Array.from(e.changedTouches).forEach(touch => {
+                    activeTouchesRef.current.set(touch.identifier, noteKey);
+                  });
+
+                  if (onNotePlay) {
+                    onNotePlay(note, octave, 0.8);
+                  }
+                };
+
+                const handleTouchEnd = (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  // Remove tracking for ended touches
+                  Array.from(e.changedTouches).forEach(touch => {
+                    const touchNoteKey = activeTouchesRef.current.get(touch.identifier);
+                    if (touchNoteKey === noteKey) {
+                      activeTouchesRef.current.delete(touch.identifier);
+                    }
+                  });
+                };
+
                 return (
                   <div
                     key={fret}
@@ -164,9 +197,13 @@ function GuitarFretboard({
                       color: '#fff',
                       boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
                       zIndex: 10,
-                      opacity: !isInBoxPattern ? 0.5 : 1
+                      opacity: !isInBoxPattern ? 0.5 : 1,
+                      touchAction: 'none' // Prevent default touch behaviors
                     }}
                     onClick={() => onNotePlay && onNotePlay(note, octave, 0.8)}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                    onTouchCancel={handleTouchEnd}
                   >
                     {showNoteLabels ? (noteDisplay[note] || note) : ''}
                   </div>

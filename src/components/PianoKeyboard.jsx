@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useRef } from 'react';
 import { notes, keyMap, firstOctaveKeys } from '../data/musicTheory';
 import './PianoKeyboard.css';
 
@@ -14,6 +14,7 @@ const PianoKeyboard = memo(function PianoKeyboard({
   externalActiveKeys = new Set()
 }) {
   const [activeKeys, setActiveKeys] = useState(new Set());
+  const activeTouchesRef = useRef(new Map()); // Track which touch ID is on which key
 
   const blackKeyPositions = {
     'C#': 1.0,
@@ -25,8 +26,8 @@ const PianoKeyboard = memo(function PianoKeyboard({
 
   const whiteKeyWidth = 50;
 
-  // Handle mouse/touch events
-  const handleNoteStart = (note, noteOctave) => {
+  // Handle mouse events
+  const handleMouseDown = (note, noteOctave) => {
     if (!isInteractive) return;
 
     const keyId = `${note}${noteOctave}`;
@@ -35,7 +36,7 @@ const PianoKeyboard = memo(function PianoKeyboard({
     onKeyDown?.(note, noteOctave);
   };
 
-  const handleNoteEnd = (note, noteOctave) => {
+  const handleMouseUp = (note, noteOctave) => {
     if (!isInteractive) return;
 
     const keyId = `${note}${noteOctave}`;
@@ -45,6 +46,49 @@ const PianoKeyboard = memo(function PianoKeyboard({
       return newSet;
     });
     onKeyUp?.(note, noteOctave);
+  };
+
+  // Handle multi-touch events
+  const handleTouchStart = (e, note, noteOctave) => {
+    if (!isInteractive) return;
+    e.preventDefault();
+
+    const keyId = `${note}${noteOctave}`;
+
+    // Track each new touch point
+    Array.from(e.changedTouches).forEach(touch => {
+      activeTouchesRef.current.set(touch.identifier, keyId);
+    });
+
+    setActiveKeys(prev => new Set([...prev, keyId]));
+    onNotePlay?.(note, noteOctave);
+    onKeyDown?.(note, noteOctave);
+  };
+
+  const handleTouchEnd = (e, note, noteOctave) => {
+    if (!isInteractive) return;
+    e.preventDefault();
+
+    const keyId = `${note}${noteOctave}`;
+
+    // Remove tracking for ended touches
+    Array.from(e.changedTouches).forEach(touch => {
+      const touchKeyId = activeTouchesRef.current.get(touch.identifier);
+      if (touchKeyId === keyId) {
+        activeTouchesRef.current.delete(touch.identifier);
+      }
+    });
+
+    // Only deactivate key if no more touches are on it
+    const stillTouched = Array.from(activeTouchesRef.current.values()).includes(keyId);
+    if (!stillTouched) {
+      setActiveKeys(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(keyId);
+        return newSet;
+      });
+      onKeyUp?.(note, noteOctave);
+    }
   };
 
   // Render a single piano key
@@ -81,26 +125,24 @@ const PianoKeyboard = memo(function PianoKeyboard({
     const intervalIndex = highlightedNotes.indexOf(note);
     const intervalLabel = intervalIndex >= 0 ? (intervalIndex === 0 && isRoot ? 'R' : intervalIndex + 1) : null;
 
+    const keyStyle = isBlackKey ? {
+      ...style,
+      touchAction: 'none' // Prevent default touch behaviors for better multi-touch
+    } : {
+      touchAction: 'none' // Prevent default touch behaviors for better multi-touch
+    };
+
     return (
       <div
         key={keyId}
         className={className}
-        style={style}
-        onMouseDown={() => handleNoteStart(note, oct)}
-        onMouseUp={() => handleNoteEnd(note, oct)}
-        onMouseLeave={() => handleNoteEnd(note, oct)}
-        onTouchStart={(e) => {
-          e.preventDefault();
-          handleNoteStart(note, oct);
-        }}
-        onTouchEnd={(e) => {
-          e.preventDefault();
-          handleNoteEnd(note, oct);
-        }}
-        onTouchCancel={(e) => {
-          e.preventDefault();
-          handleNoteEnd(note, oct);
-        }}
+        style={keyStyle}
+        onMouseDown={() => handleMouseDown(note, oct)}
+        onMouseUp={() => handleMouseUp(note, oct)}
+        onMouseLeave={() => handleMouseUp(note, oct)}
+        onTouchStart={(e) => handleTouchStart(e, note, oct)}
+        onTouchEnd={(e) => handleTouchEnd(e, note, oct)}
+        onTouchCancel={(e) => handleTouchEnd(e, note, oct)}
       >
         {showKeyboardLabels && (
           <div className="key-label">{note}{oct}</div>
