@@ -1,22 +1,24 @@
 .nav-icons {
   position: fixed;
-  top: 20px;
-  left: 20px;
+  top: clamp(10px, 2vh, 20px);
+  left: clamp(10px, 2vw, 20px);
   z-index: 1000;
   display: flex;
-  gap: 10px;
+  gap: clamp(6px, 1vw, 10px);
 }
 
 .nav-icon-button {
-  width: 50px;
-  height: 50px;
+  width: clamp(44px, 5vw, 50px);
+  height: clamp(44px, 5vw, 50px);
+  min-width: 44px;
+  min-height: 44px;
   background: #3a3a3a;
   border: 2px solid #555;
-  border-radius: 8px;
+  border-radius: clamp(6px, 0.8vw, 8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: clamp(20px, 2.5vw, 24px);
   cursor: pointer;
   text-decoration: none;
   transition: all 0.3s;
@@ -60,4 +62,12 @@
   background: #10b981;
   border-color: #10b981;
   box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
+}
+
+/* Small screens - ensure proper wrapping if needed */
+@media (max-width: 480px) {
+  .nav-icons {
+    flex-wrap: wrap;
+    max-width: 150px;
+  }
 }

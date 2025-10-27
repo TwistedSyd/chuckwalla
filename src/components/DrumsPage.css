@@ -26,16 +26,16 @@
 }
 
 body {
-    padding: 15px;
+    padding: clamp(10px, 2vh, 15px);
 }
 
 h2 {
     text-align: center;
-    margin: 25px 0 15px 0;
+    margin: clamp(15px, 2.5vh, 25px) 0 clamp(10px, 1.5vh, 15px) 0;
     color: #fff;
-    font-size: 18px;
-    letter-spacing: 1px;
-    padding: 10px;
+    font-size: clamp(16px, 2vw, 18px);
+    letter-spacing: clamp(0.5px, 0.1vw, 1px);
+    padding: clamp(8px, 1vh, 10px);
     background: #3a3a3a;
     border-radius: 8px;
 }
@@ -44,8 +44,8 @@ h2 {
 .pattern-container {
     background: #3a3a3a;
     border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
+    padding: clamp(12px, 1.5vw, 15px);
+    margin-bottom: clamp(12px, 1.5vh, 15px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
@@ -53,11 +53,13 @@ h2 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: clamp(8px, 1vh, 10px);
+    flex-wrap: wrap;
+    gap: clamp(8px, 1vw, 10px);
 }
 
 .pattern-title {
-    font-size: 14px;
+    font-size: clamp(13px, 1.5vw, 14px);
     font-weight: bold;
     color: #fff;
 }
@@ -88,19 +90,55 @@ h2 {
 /* MIDI Grid */
 .midi-grid {
     display: grid;
-    grid-template-columns: 80px repeat(16, minmax(20px, 1fr));
-    gap: 2px;
+    grid-template-columns: clamp(45px, 8vw, 80px) repeat(16, minmax(clamp(12px, 2vw, 20px), 1fr));
+    gap: clamp(1px, 0.2vw, 2px);
     background: rgba(0, 0, 0, 0.3);
-    padding: 8px;
+    padding: clamp(4px, 0.8vw, 8px);
     border-radius: 5px;
     max-width: 100%;
+}
+
+/* iPad Pro 13" and smaller */
+@media (max-width: 1024px) {
+    .midi-grid {
+        grid-template-columns: 60px repeat(16, minmax(15px, 1fr));
+        padding: 6px;
+        gap: 1px;
+    }
+}
+
+/* iPhone and small tablets */
+@media (max-width: 768px) {
+    .midi-grid {
+        grid-template-columns: 45px repeat(16, minmax(12px, 1fr));
+        padding: 4px;
+        gap: 1px;
+        font-size: 8px;
+    }
+
+    .pattern-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+
+    .pattern-header > div {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+
+    .play-button {
+        flex: 1;
+        min-width: 80px;
+    }
 }
 
 .instrument-label {
     display: flex;
     align-items: center;
-    padding: 5px;
-    font-size: 10px;
+    padding: clamp(3px, 0.5vw, 5px);
+    font-size: clamp(8px, 1vw, 10px);
     font-weight: bold;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
@@ -124,9 +162,11 @@ h2 {
     cursor: pointer;
     transition: box-shadow 0.2s;
     position: relative;
-    max-width: 35px;
-    max-height: 35px;
-    touch-action: none; /* Prevent default touch behaviors like zooming */
+    max-width: clamp(25px, 3.5vw, 35px);
+    max-height: clamp(25px, 3.5vw, 35px);
+    min-width: 20px;
+    min-height: 20px;
+    touch-action: none;
 }
 
 .grid-cell.active {
@@ -179,12 +219,36 @@ h2 {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 30px;
-    margin-bottom: 20px;
-    padding: 15px;
+    gap: clamp(15px, 3vw, 30px);
+    margin-bottom: clamp(15px, 2vh, 20px);
+    padding: clamp(10px, 1.5vw, 15px);
     background: rgba(255, 255, 255, 0.05);
     border-radius: 8px;
     flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .controls-wrapper {
+        gap: 15px;
+        padding: 10px;
+        flex-direction: column;
+    }
+
+    .tempo-control,
+    .search-container,
+    .master-controls {
+        width: 100%;
+    }
+
+    .master-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .master-controls button {
+        width: 100%;
+    }
 }
 
 .tempo-control {

@@ -3,6 +3,9 @@ import './HomePage.css';
 function HomePage({ onNavigate }) {
   return (
     <div className="home-page">
+      <button className="midi-logo-button" onClick={() => onNavigate('midi')}>
+        <img src="/midi-port-icon.png" alt="MIDI" />
+      </button>
       <span className="chuckwalla-bg chuckwalla-bg-1">🦎</span>
       <span className="chuckwalla-bg chuckwalla-bg-2">🦎</span>
       <span className="chuckwalla-bg chuckwalla-bg-3">🦎</span>

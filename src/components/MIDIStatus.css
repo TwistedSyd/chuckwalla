@@ -1,16 +1,16 @@
 .midi-status {
   position: fixed;
-  top: 15px;
-  right: 15px;
-  padding: 8px 15px;
+  top: clamp(10px, 2vh, 15px);
+  right: clamp(10px, 2vw, 15px);
+  padding: clamp(6px, 0.8vh, 8px) clamp(10px, 1.5vw, 15px);
   border-radius: 20px;
-  font-size: 12px;
+  font-size: clamp(10px, 1.2vw, 12px);
   font-weight: bold;
   font-family: 'Courier New', monospace;
   z-index: 1000;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  max-width: 400px;
+  max-width: min(400px, 40vw);
 }
 
 .midi-status.connected {
@@ -30,7 +30,7 @@
   color: #fff;
   border: 2px solid #d97706;
   cursor: help;
-  font-size: 11px;
+  font-size: clamp(9px, 1vw, 11px);
 }
 
 .midi-status.needs-click {
@@ -39,7 +39,7 @@
   border: 2px solid #2563eb;
   cursor: pointer;
   animation: pulse 2s infinite;
-  font-size: 11px;
+  font-size: clamp(9px, 1vw, 11px);
 }
 
 .midi-status.needs-click:hover {
@@ -54,5 +54,17 @@
   }
   50% {
     opacity: 0.8;
+  }
+}
+
+/* Small screens - reposition below nav */
+@media (max-width: 768px) {
+  .midi-status {
+    top: 60px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+    text-align: center;
+    border-radius: 15px;
   }
 }

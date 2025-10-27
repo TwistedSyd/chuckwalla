@@ -77,7 +77,10 @@ function DrumsPage() {
     return initial;
   });
   const [editorName, setEditorName] = useState('My Custom Beat');
-  const [userPatterns, setUserPatterns] = useState([]);
+  const [userPatterns, setUserPatterns] = useState(() => {
+    const saved = localStorage.getItem('drumsUserPatterns');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [playingPattern, setPlayingPattern] = useState(null);
   const [isPlayingEditor, setIsPlayingEditor] = useState(false); // Track if editor is playing
   const [currentStep, setCurrentStep] = useState(0);
@@ -438,6 +441,11 @@ function DrumsPage() {
   useEffect(() => {
     localStorage.setItem('drumsCurrentTab', currentTab);
   }, [currentTab]);
+
+  // Save user patterns to localStorage
+  useEffect(() => {
+    localStorage.setItem('drumsUserPatterns', JSON.stringify(userPatterns));
+  }, [userPatterns]);
 
   // Keep refs in sync with state
   useEffect(() => {

@@ -9,6 +9,7 @@ import LearningRoadmap from './components/LearningRoadmap';
 import DrumsPage from './components/DrumsPage';
 import GuitarPage from './components/GuitarPage';
 import CircleOfFifthsPage from './components/CircleOfFifthsPage';
+import MIDIPage from './components/MIDIPage';
 import { useAudio } from './hooks/useAudio';
 import { useMIDI } from './hooks/useMIDI';
 import { keyMap, getOctaveOffset } from './data/musicTheory';
@@ -223,6 +224,15 @@ function App() {
       <div className="app">
         <Navigation onBackHome={() => navigateToPage('home')} currentPage={currentPage} onNavigate={navigateToPage} />
         <CircleOfFifthsPage />
+      </div>
+    );
+  }
+
+  // Show MIDI page
+  if (currentPage === 'midi') {
+    return (
+      <div className="app">
+        <MIDIPage onNavigate={navigateToPage} />
       </div>
     );
   }

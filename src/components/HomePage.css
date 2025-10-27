@@ -4,9 +4,40 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 90px 20px 20px;
+  padding: clamp(60px, 8vh, 90px) clamp(10px, 2vw, 20px) clamp(10px, 2vh, 20px);
   position: relative;
   overflow: hidden;
+}
+
+.midi-logo-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.3s;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+}
+
+.midi-logo-button img {
+  width: 100%;
+  height: 100%;
+  filter: brightness(0) invert(1);
+  opacity: 0.9;
+  transition: all 0.3s;
+}
+
+.midi-logo-button:hover img {
+  opacity: 1;
+  transform: scale(1.1);
+  filter: brightness(0) invert(1) drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
 }
 
 .home-container {
@@ -27,9 +58,9 @@
 }
 
 .chuckwalla-graphic {
-  font-size: clamp(150px, 20vw, 220px);
+  font-size: clamp(120px, 20vw, 220px);
   position: absolute;
-  top: -90px;
+  top: clamp(-70px, -8vh, -50px);
   left: 50%;
   transform: translateX(-50%);
   opacity: 0.15;
@@ -40,7 +71,7 @@
 
 .chuckwalla-bg {
   position: absolute;
-  font-size: 180px;
+  font-size: clamp(100px, 15vw, 180px);
   opacity: 0.08;
   filter: hue-rotate(20deg) saturate(1.5);
   pointer-events: none;
@@ -51,49 +82,49 @@
   top: 15%;
   left: 5%;
   transform: rotate(-25deg);
-  font-size: 200px;
+  font-size: clamp(120px, 18vw, 200px);
 }
 
 .chuckwalla-bg-2 {
   top: 10%;
   right: 8%;
   transform: rotate(30deg);
-  font-size: 160px;
+  font-size: clamp(100px, 14vw, 160px);
 }
 
 .chuckwalla-bg-3 {
   bottom: 15%;
   left: 10%;
   transform: rotate(15deg);
-  font-size: 140px;
+  font-size: clamp(90px, 12vw, 140px);
 }
 
 .chuckwalla-bg-4 {
   bottom: 20%;
   right: 5%;
   transform: rotate(-20deg);
-  font-size: 190px;
+  font-size: clamp(110px, 16vw, 190px);
 }
 
 .subtitle {
-  font-size: clamp(14px, 3vw, 18px);
+  font-size: clamp(13px, 2.5vw, 18px);
   color: #aaa;
-  margin-bottom: 40px;
-  letter-spacing: 1px;
+  margin-bottom: clamp(20px, 4vh, 40px);
+  letter-spacing: clamp(0.5px, 0.1vw, 1px);
 }
 
 .instruments-grid {
   display: flex;
-  gap: 20px;
-  margin-bottom: 40px;
+  gap: clamp(10px, 2vw, 20px);
+  margin-bottom: clamp(30px, 5vh, 40px);
   justify-content: center;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 .instrument-card {
   background: rgba(58, 58, 58, 0.7);
-  border-radius: 12px;
-  padding: 30px;
+  border-radius: clamp(8px, 1.2vw, 12px);
+  padding: clamp(20px, 3vw, 30px);
   transition: all 0.3s;
   text-decoration: none;
   color: inherit;
@@ -102,11 +133,11 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  flex: 1;
-  min-width: 220px;
+  flex: 1 1 clamp(200px, 22vw, 280px);
+  min-width: min(220px, 100%);
   max-width: 280px;
-  min-height: 380px;
-  max-height: 380px;
+  min-height: clamp(280px, 35vh, 380px);
+  aspect-ratio: 0.75;
   position: relative;
   overflow: visible;
 }
@@ -118,7 +149,7 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  padding: 10px;
+  padding: clamp(8px, 1vw, 10px);
 }
 
 .instrument-card.clickable {
@@ -171,8 +202,8 @@
 }
 
 .instrument-icon {
-  font-size: clamp(44px, 7vw, 60px);
-  margin-bottom: 14px;
+  font-size: clamp(40px, 6vw, 60px);
+  margin-bottom: clamp(10px, 1.5vh, 14px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -185,9 +216,9 @@
 }
 
 .instrument-name {
-  font-size: clamp(19px, 3.5vw, 24px);
+  font-size: clamp(18px, 2.8vw, 24px);
   font-weight: bold;
-  margin-bottom: 10px;
+  margin-bottom: clamp(8px, 1vh, 10px);
   text-align: center;
 }
 
@@ -220,40 +251,32 @@
 
 .coming-soon-badge {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: clamp(8px, 1vh, 10px);
+  right: clamp(8px, 1vw, 10px);
   background: #555;
   color: #bbb;
-  padding: 5px 12px;
+  padding: clamp(4px, 0.5vh, 5px) clamp(10px, 1.2vw, 12px);
   border-radius: 20px;
-  font-size: 11px;
+  font-size: clamp(10px, 1.2vw, 11px);
   font-weight: bold;
   letter-spacing: 0.5px;
 }
 
 .footer {
-  margin-top: 60px;
-  font-size: 14px;
+  margin-top: clamp(40px, 8vh, 60px);
+  font-size: clamp(12px, 1.5vw, 14px);
   color: #666;
 }
 
+/* Small screens - single column */
 @media (max-width: 768px) {
-  .home-page h1 {
-    letter-spacing: 2px;
-  }
-
-  .subtitle {
-    margin-bottom: 40px;
-  }
-
   .instruments-grid {
-    flex-direction: column;
-    max-width: 400px;
-    margin: 0 auto 40px;
-    gap: 15px;
+    max-width: min(400px, 100%);
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .instrument-card {
-    padding: 30px 20px;
+    max-width: 100%;
   }
 }
