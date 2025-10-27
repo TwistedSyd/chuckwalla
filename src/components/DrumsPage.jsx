@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, memo, useCallback } from 'react';
+import { Midi } from '@tonejs/midi';
 import DrumRoadmap from './DrumRoadmap';
 import './DrumsPage.css';
 
@@ -633,6 +634,133 @@ function DrumsPage() {
     }
   };
 
+  // MIDI note mapping (General MIDI drum map)
+  const MIDI_NOTE_MAP = {
+    kick: 36,    // Bass Drum 1
+    snare: 38,   // Acoustic Snare
+    clap: 39,    // Hand Clap
+    hihat: 42,   // Closed Hi-Hat
+    cymbal: 49,  // Crash Cymbal 1
+    tom: 48,     // Hi Mid Tom
+    rim: 37,     // Side Stick
+    shaker: 70,  // Maracas
+    perc: 60     // Hi Bongo
+  };
+
+  // Reverse mapping for import
+  const NOTE_TO_INSTRUMENT = Object.fromEntries(
+    Object.entries(MIDI_NOTE_MAP).map(([inst, note]) => [note, inst])
+  );
+
+  const exportPatternToMIDI = (pattern, tempo = 120) => {
+    const midi = new Midi();
+    const track = midi.addTrack();
+
+    const bars = pattern.bars || 1;
+    const totalSteps = STEPS * bars;
+    const secondsPerBeat = 60 / tempo;
+    const secondsPerStep = secondsPerBeat / 4; // 16th notes
+
+    // Add notes for each instrument
+    instruments.forEach(inst => {
+      if (pattern[inst] && pattern[inst].length > 0) {
+        const midiNote = MIDI_NOTE_MAP[inst];
+        if (midiNote) {
+          pattern[inst].forEach(step => {
+            const time = step * secondsPerStep;
+            track.addNote({
+              midi: midiNote,
+              time: time,
+              duration: 0.1, // Short note duration
+              velocity: 0.9
+            });
+          });
+        }
+      }
+    });
+
+    // Download the MIDI file
+    const blob = new Blob([midi.toArray()], { type: 'audio/midi' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${pattern.name.replace(/[^a-z0-9]/gi, '_')}.mid`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const importMIDIPattern = async (file) => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const midi = new Midi(arrayBuffer);
+
+      if (midi.tracks.length === 0) {
+        alert('No tracks found in MIDI file');
+        return;
+      }
+
+      // Use the first track
+      const track = midi.tracks[0];
+
+      // Create new pattern
+      const newPattern = {};
+      instruments.forEach(inst => { newPattern[inst] = []; });
+
+      // Determine BPM and calculate step duration
+      const bpm = midi.header.tempos[0]?.bpm || 120;
+      setTempo(bpm);
+      setTempoInput(String(bpm));
+
+      const secondsPerBeat = 60 / bpm;
+      const secondsPerStep = secondsPerBeat / 4;
+
+      // Find the last note time to determine number of bars
+      let maxTime = 0;
+      track.notes.forEach(note => {
+        if (note.time > maxTime) maxTime = note.time;
+      });
+
+      const totalSteps = Math.ceil(maxTime / secondsPerStep) + 1;
+      const bars = Math.ceil(totalSteps / STEPS);
+      const clampedBars = Math.min(16, Math.max(1, [1, 2, 3, 4, 8, 12, 16].find(b => b >= bars) || 16));
+
+      // Parse notes
+      track.notes.forEach(note => {
+        const instrument = NOTE_TO_INSTRUMENT[note.midi];
+        if (instrument) {
+          const step = Math.round(note.time / secondsPerStep);
+          if (step < STEPS * clampedBars && !newPattern[instrument].includes(step)) {
+            newPattern[instrument].push(step);
+          }
+        }
+      });
+
+      // Sort all step arrays
+      instruments.forEach(inst => {
+        newPattern[inst].sort((a, b) => a - b);
+      });
+
+      // Load into editor
+      setEditorPattern(newPattern);
+      setEditorBars(clampedBars);
+      setEditorName(file.name.replace('.mid', '').replace(/[^a-z0-9\s]/gi, ' '));
+      setEditorPage(0);
+      setEditingPatternIndex(null);
+      setEditorVisible(true);
+
+      alert(`MIDI file imported successfully! (${clampedBars} bars at ${bpm} BPM)`);
+
+      setTimeout(() => {
+        document.getElementById('editor-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } catch (error) {
+      console.error('Error importing MIDI:', error);
+      alert('Error importing MIDI file. Please make sure it\'s a valid MIDI file.');
+    }
+  };
+
   const handleTapTempo = () => {
     const now = Date.now();
     const newTapTimes = [...tapTimes, now];
@@ -803,6 +931,30 @@ function DrumsPage() {
                 <button id="save-pattern" onClick={savePattern}>
                   {editingPatternIndex !== null ? 'Update Pattern' : 'Save Pattern'}
                 </button>
+                <label
+                  htmlFor="midi-import"
+                  className="play-button"
+                  style={{
+                    cursor: 'pointer',
+                    background: '#10b981',
+                    display: 'inline-block',
+                    textAlign: 'center'
+                  }}
+                >
+                  📥 Import MIDI
+                </label>
+                <input
+                  id="midi-import"
+                  type="file"
+                  accept=".mid,.midi"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      importMIDIPattern(e.target.files[0]);
+                      e.target.value = ''; // Reset file input
+                    }
+                  }}
+                />
               </div>
               <div className="pattern-container">
                 <div className="pattern-header">
@@ -894,6 +1046,13 @@ function DrumsPage() {
                           onClick={() => copyPatternToEditor(pattern)}
                         >
                           📋 Copy
+                        </button>
+                        <button
+                          className="play-button"
+                          style={{ background: '#10b981', border: '1px solid #059669' }}
+                          onClick={() => exportPatternToMIDI(pattern, tempo)}
+                        >
+                          📤 Export MIDI
                         </button>
                         <button
                           className="play-button"
