@@ -77,6 +77,7 @@ function DrumsPage() {
     return initial;
   });
   const [editorName, setEditorName] = useState('My Custom Beat');
+  const [editingPatternIndex, setEditingPatternIndex] = useState(null); // Track which pattern is being edited
   const [userPatterns, setUserPatterns] = useState(() => {
     const saved = localStorage.getItem('drumsUserPatterns');
     return saved ? JSON.parse(saved) : [];
@@ -498,6 +499,23 @@ function DrumsPage() {
     });
     setEditorPattern(newPattern);
     setEditorName(pattern.name + ' (Copy)');
+    setEditingPatternIndex(null); // Reset editing state when copying
+    setEditorVisible(true);
+    setTimeout(() => {
+      document.getElementById('editor-section')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  const editPattern = (pattern, index) => {
+    const newPattern = {};
+    instruments.forEach(inst => {
+      newPattern[inst] = pattern[inst] ? [...pattern[inst]] : [];
+    });
+    setEditorPattern(newPattern);
+    // Extract the name without the number prefix (e.g., "1. My Beat" -> "My Beat")
+    const nameWithoutNumber = pattern.name.replace(/^\d+\.\s*/, '');
+    setEditorName(nameWithoutNumber);
+    setEditingPatternIndex(index); // Set the index of the pattern being edited
     setEditorVisible(true);
     setTimeout(() => {
       document.getElementById('editor-section')?.scrollIntoView({ behavior: 'smooth' });
@@ -538,12 +556,25 @@ function DrumsPage() {
       return;
     }
 
-    const newPattern = {
-      name: `${userPatterns.length + 1}. ${editorName}`,
-      ...editorPattern
-    };
-    setUserPatterns([...userPatterns, newPattern]);
-    alert(`Beat "${editorName}" saved!`);
+    if (editingPatternIndex !== null) {
+      // Update existing pattern
+      const updatedPatterns = [...userPatterns];
+      updatedPatterns[editingPatternIndex] = {
+        name: `${editingPatternIndex + 1}. ${editorName}`,
+        ...editorPattern
+      };
+      setUserPatterns(updatedPatterns);
+      alert(`Beat "${editorName}" updated!`);
+      setEditingPatternIndex(null); // Reset editing state
+    } else {
+      // Create new pattern
+      const newPattern = {
+        name: `${userPatterns.length + 1}. ${editorName}`,
+        ...editorPattern
+      };
+      setUserPatterns([...userPatterns, newPattern]);
+      alert(`Beat "${editorName}" saved!`);
+    }
   };
 
   const deleteUserPattern = (index) => {
@@ -654,7 +685,7 @@ function DrumsPage() {
 
           {editorVisible && (
             <div className="editor-section visible" id="editor-section">
-              <h2>🎹 CREATE YOUR OWN BEAT</h2>
+              <h2>{editingPatternIndex !== null ? '✏️ EDIT YOUR BEAT' : '🎹 CREATE YOUR OWN BEAT'}</h2>
               <div className="editor-controls">
                 <input
                   type="text"
@@ -664,7 +695,9 @@ function DrumsPage() {
                   onChange={(e) => setEditorName(e.target.value)}
                 />
                 <button id="clear-editor" onClick={clearEditor}>Clear All</button>
-                <button id="save-pattern" onClick={savePattern}>Save Pattern</button>
+                <button id="save-pattern" onClick={savePattern}>
+                  {editingPatternIndex !== null ? 'Update Pattern' : 'Save Pattern'}
+                </button>
               </div>
               <div className="pattern-container">
                 <div className="pattern-header">
@@ -703,6 +736,13 @@ function DrumsPage() {
                           onClick={() => playingPattern === pattern ? stopPattern() : playPattern(pattern)}
                         >
                           {playingPattern === pattern ? '⏹ Stop' : '▶ Play'}
+                        </button>
+                        <button
+                          className="play-button"
+                          style={{ background: 'rgba(245, 158, 11, 0.8)', border: '1px solid rgba(251, 191, 36, 0.5)' }}
+                          onClick={() => editPattern(pattern, index)}
+                        >
+                          ✏️ Edit
                         </button>
                         <button
                           className="play-button"
