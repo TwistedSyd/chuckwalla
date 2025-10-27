@@ -32,32 +32,44 @@ const edmPatterns = [
 
 const instruments = ['kick', 'snare', 'clap', 'hihat', 'cymbal', 'tom', 'rim', 'shaker', 'perc'];
 
-const PatternGrid = memo(function PatternGrid({ pattern, isEditor, isPlaying, currentStep, onCellClick }) {
+const PatternGrid = memo(function PatternGrid({ pattern, isEditor, isPlaying, currentStep, onCellClick, bars = 4, page = 0 }) {
   const availableInstruments = instruments.filter(inst => pattern[inst]);
+  const barsPerPage = 1; // Show only 1 bar per page
+  const stepsPerPage = STEPS * barsPerPage; // 16 steps per page
+  const pageOffset = page * stepsPerPage; // Calculate offset for current page
 
   return (
-    <div className="midi-grid">
+    <div className="midi-grid" style={{ gridTemplateColumns: `auto repeat(${stepsPerPage}, 1fr)` }}>
       {availableInstruments.map(inst => (
         <div key={`row-${inst}`} style={{ display: 'contents' }}>
           <div className={`instrument-label ${inst}`}>
             {inst.toUpperCase()}
           </div>
-          {Array.from({ length: STEPS }).map((_, i) => (
-            <div
-              key={`${inst}-${i}`}
-              className={`grid-cell ${inst} ${pattern[inst].includes(i) ? 'active' : ''} ${
-                isPlaying && currentStep === i ? 'playing' : ''
-              } ${isEditor ? 'editable' : ''}`}
-              onMouseDown={isEditor ? (e) => {
-                e.preventDefault();
-                onCellClick(inst, i);
-              } : undefined}
-            >
-              {(i === 0 || i === 4 || i === 8 || i === 12) && (
-                <div className="beat-marker">{(i / 4) + 1}</div>
-              )}
-            </div>
-          ))}
+          {Array.from({ length: stepsPerPage }).map((_, i) => {
+            const globalStep = pageOffset + i; // The actual step index in the full pattern
+            const stepInBar = i % STEPS; // Which step within the bar (0-15)
+            const isBeatStart = stepInBar % 4 === 0;
+            const barNumber = page + 1; // The current bar number (1-indexed)
+
+            return (
+              <div
+                key={`${inst}-${i}`}
+                className={`grid-cell ${inst} ${pattern[inst] && pattern[inst].includes(globalStep) ? 'active' : ''} ${
+                  isPlaying && currentStep === globalStep ? 'playing' : ''
+                } ${isEditor ? 'editable' : ''}`}
+                onMouseDown={isEditor ? (e) => {
+                  e.preventDefault();
+                  onCellClick(inst, globalStep);
+                } : undefined}
+              >
+                {isBeatStart && (
+                  <div className="beat-marker">
+                    {i === 0 ? `${barNumber}` : (stepInBar / 4) + 1}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       ))}
     </div>
@@ -69,6 +81,7 @@ function DrumsPage() {
     return localStorage.getItem('drumsCurrentTab') || 'patterns';
   });
   const [tempo, setTempo] = useState(120);
+  const [tempoInput, setTempoInput] = useState('120'); // String value for input field
   const [searchQuery, setSearchQuery] = useState('');
   const [editorVisible, setEditorVisible] = useState(false);
   const [editorPattern, setEditorPattern] = useState(() => {
@@ -77,6 +90,9 @@ function DrumsPage() {
     return initial;
   });
   const [editorName, setEditorName] = useState('My Custom Beat');
+  const [editorBars, setEditorBars] = useState(1); // Number of bars in editor (1, 4, 8, 12, or 16)
+  const [editorPage, setEditorPage] = useState(0); // Current page (0-indexed, each page = 1 bar)
+  const [userPatternPages, setUserPatternPages] = useState({}); // Track page for each user pattern
   const [editingPatternIndex, setEditingPatternIndex] = useState(null); // Track which pattern is being edited
   const [userPatterns, setUserPatterns] = useState(() => {
     const saved = localStorage.getItem('drumsUserPatterns');
@@ -465,15 +481,17 @@ function DrumsPage() {
     currentStepRef.current = currentStep;
   }, [currentStep]);
 
-  // Playback loop - only restart when playingPattern, tempo, or isPlayingEditor changes
+  // Playback loop - only restart when playingPattern, tempo, isPlayingEditor, or editorBars changes
   useEffect(() => {
     if (playingPattern) {
       const stepTime = (60 / tempo) * 1000 / 4;
 
       intervalRef.current = setInterval(() => {
         setCurrentStep(prev => {
-          const next = (prev + 1) % STEPS;
           const patternToPlay = isPlayingEditorRef.current ? editorPatternRef.current : playingPatternRef.current;
+          const bars = isPlayingEditorRef.current ? editorBars : (playingPattern.bars || 1);
+          const totalSteps = STEPS * bars;
+          const next = (prev + 1) % totalSteps;
 
           instruments.forEach(inst => {
             if (patternToPlay[inst] && patternToPlay[inst].includes(next)) {
@@ -490,7 +508,33 @@ function DrumsPage() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [playingPattern, tempo, isPlayingEditor]);
+  }, [playingPattern, tempo, isPlayingEditor, editorBars]);
+
+  // Auto-switch page when playhead reaches a new bar
+  useEffect(() => {
+    if (playingPattern && currentStep !== null) {
+      const currentBar = Math.floor(currentStep / STEPS);
+
+      if (isPlayingEditor) {
+        // Update editor page
+        if (currentBar !== editorPage) {
+          setEditorPage(currentBar);
+        }
+      } else {
+        // Find the playing pattern's index and update its page
+        const patternIndex = userPatterns.findIndex(p => p === playingPattern);
+        if (patternIndex !== -1) {
+          const currentPatternPage = userPatternPages[patternIndex] || 0;
+          if (currentBar !== currentPatternPage) {
+            setUserPatternPages(prev => ({
+              ...prev,
+              [patternIndex]: currentBar
+            }));
+          }
+        }
+      }
+    }
+  }, [currentStep, playingPattern, isPlayingEditor, editorPage, userPatterns, userPatternPages]);
 
   const copyPatternToEditor = (pattern) => {
     const newPattern = {};
@@ -499,6 +543,8 @@ function DrumsPage() {
     });
     setEditorPattern(newPattern);
     setEditorName(pattern.name + ' (Copy)');
+    setEditorBars(1); // Always default to 1 bar when copying
+    setEditorPage(0); // Reset to first page
     setEditingPatternIndex(null); // Reset editing state when copying
     setEditorVisible(true);
     setTimeout(() => {
@@ -515,6 +561,8 @@ function DrumsPage() {
     // Extract the name without the number prefix (e.g., "1. My Beat" -> "My Beat")
     const nameWithoutNumber = pattern.name.replace(/^\d+\.\s*/, '');
     setEditorName(nameWithoutNumber);
+    setEditorBars(pattern.bars || 4); // Load bars count, default to 4 for old patterns
+    setEditorPage(0); // Reset to first page
     setEditingPatternIndex(index); // Set the index of the pattern being edited
     setEditorVisible(true);
     setTimeout(() => {
@@ -561,6 +609,7 @@ function DrumsPage() {
       const updatedPatterns = [...userPatterns];
       updatedPatterns[editingPatternIndex] = {
         name: `${editingPatternIndex + 1}. ${editorName}`,
+        bars: editorBars,
         ...editorPattern
       };
       setUserPatterns(updatedPatterns);
@@ -570,6 +619,7 @@ function DrumsPage() {
       // Create new pattern
       const newPattern = {
         name: `${userPatterns.length + 1}. ${editorName}`,
+        bars: editorBars,
         ...editorPattern
       };
       setUserPatterns([...userPatterns, newPattern]);
@@ -599,7 +649,9 @@ function DrumsPage() {
       }
       const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
       const bpm = Math.round(60000 / avgInterval);
-      setTempo(Math.max(60, Math.min(240, bpm)));
+      const clampedBpm = Math.max(0, Math.min(300, bpm));
+      setTempo(clampedBpm);
+      setTempoInput(String(clampedBpm));
     }
 
     setTapTimes(newTapTimes);
@@ -646,16 +698,44 @@ function DrumsPage() {
             <div className="tempo-control">
               <label>Tempo (BPM):</label>
               <div className="tempo-inputs">
-                <button className="tempo-btn" onClick={() => setTempo(Math.max(60, tempo - 1))}>−</button>
+                <button className="tempo-btn" onClick={() => {
+                  const newTempo = Math.max(0, tempo - 1);
+                  setTempo(newTempo);
+                  setTempoInput(String(newTempo));
+                }}>−</button>
                 <input
                   type="number"
                   id="tempo-input"
-                  min="60"
-                  max="240"
-                  value={tempo}
-                  onChange={(e) => setTempo(Math.max(60, Math.min(240, Number(e.target.value))))}
+                  min="0"
+                  max="300"
+                  value={tempoInput}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setTempoInput(value); // Allow any input including empty string
+
+                    // Only update tempo if it's a valid number
+                    if (value !== '' && !isNaN(Number(value))) {
+                      setTempo(Number(value));
+                    }
+                  }}
+                  onBlur={() => {
+                    // When user clicks away, validate and set defaults
+                    if (tempoInput === '' || isNaN(Number(tempoInput))) {
+                      setTempo(120);
+                      setTempoInput('120');
+                    } else {
+                      const value = Number(tempoInput);
+                      const clamped = Math.max(0, Math.min(300, value));
+                      setTempo(clamped);
+                      setTempoInput(String(clamped));
+                    }
+                  }}
                 />
-                <button className="tempo-btn" onClick={() => setTempo(Math.min(240, tempo + 1))}>+</button>
+                <button className="tempo-btn" onClick={() => {
+                  const newTempo = Math.min(300, tempo + 1);
+                  setTempo(newTempo);
+                  setTempoInput(String(newTempo));
+                }}>+</button>
               </div>
               <button id="tap-tempo" onClick={handleTapTempo}>🎵 Tap Tempo</button>
             </div>
@@ -694,6 +774,31 @@ function DrumsPage() {
                   value={editorName}
                   onChange={(e) => setEditorName(e.target.value)}
                 />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <label style={{ fontSize: '14px', whiteSpace: 'nowrap' }}>Bars:</label>
+                  <select
+                    value={editorBars}
+                    onChange={(e) => {
+                      setEditorBars(Number(e.target.value));
+                      setEditorPage(0); // Reset to first page when changing bars
+                    }}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      background: 'rgba(0,0,0,0.3)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      color: 'white'
+                    }}
+                  >
+                    <option value={1}>1</option>
+                    <option value={2}>2</option>
+                    <option value={3}>3</option>
+                    <option value={4}>4</option>
+                    <option value={8}>8</option>
+                    <option value={12}>12</option>
+                    <option value={16}>16</option>
+                  </select>
+                </div>
                 <button id="clear-editor" onClick={clearEditor}>Clear All</button>
                 <button id="save-pattern" onClick={savePattern}>
                   {editingPatternIndex !== null ? 'Update Pattern' : 'Save Pattern'}
@@ -710,12 +815,46 @@ function DrumsPage() {
                     {isPlayingEditor ? '⏹ Stop' : '▶ Play'}
                   </button>
                 </div>
+                {editorBars > 1 && (
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: '15px',
+                    padding: '10px',
+                    background: 'rgba(0,0,0,0.2)',
+                    borderRadius: '4px',
+                    marginBottom: '10px'
+                  }}>
+                    <button
+                      className="play-button"
+                      onClick={() => setEditorPage(Math.max(0, editorPage - 1))}
+                      disabled={editorPage === 0}
+                      style={{ opacity: editorPage === 0 ? 0.5 : 1 }}
+                    >
+                      ◀ Previous
+                    </button>
+                    <span style={{ color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>
+                      Bar {editorPage + 1} of {editorBars}
+                    </span>
+                    <button
+                      className="play-button"
+                      onClick={() => setEditorPage(Math.min(editorBars - 1, editorPage + 1))}
+                      disabled={editorPage >= editorBars - 1}
+                      style={{ opacity: editorPage >= editorBars - 1 ? 0.5 : 1 }}
+                    >
+                      Next ▶
+                    </button>
+                  </div>
+                )}
                 <PatternGrid
                   pattern={editorPattern}
                   isEditor={true}
                   isPlaying={isPlayingEditor}
                   currentStep={currentStep}
                   onCellClick={toggleEditorCell}
+                  bars={editorBars}
+                  page={editorPage}
                 />
               </div>
             </div>
@@ -728,7 +867,12 @@ function DrumsPage() {
                 {userPatterns.map((pattern, index) => (
                   <div key={`user-${index}`} className="pattern-container">
                     <div className="pattern-header">
-                      <div className="pattern-title">{pattern.name}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div className="pattern-title">{pattern.name}</div>
+                        <span style={{ fontSize: '12px', color: '#aaa' }}>
+                          ({pattern.bars || 1} {(pattern.bars || 1) === 1 ? 'bar' : 'bars'})
+                        </span>
+                      </div>
                       <div style={{ display: 'flex', gap: '5px' }}>
                         <button
                           className={`play-button ${playingPattern === pattern ? 'playing' : ''}`}
@@ -760,11 +904,51 @@ function DrumsPage() {
                         </button>
                       </div>
                     </div>
+                    {(pattern.bars || 4) > 1 && (
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        gap: '15px',
+                        padding: '10px',
+                        background: 'rgba(0,0,0,0.2)',
+                        borderRadius: '4px',
+                        marginBottom: '10px'
+                      }}>
+                        <button
+                          className="play-button"
+                          onClick={() => setUserPatternPages(prev => ({
+                            ...prev,
+                            [index]: Math.max(0, (prev[index] || 0) - 1)
+                          }))}
+                          disabled={(userPatternPages[index] || 0) === 0}
+                          style={{ opacity: (userPatternPages[index] || 0) === 0 ? 0.5 : 1 }}
+                        >
+                          ◀ Previous
+                        </button>
+                        <span style={{ color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>
+                          Bar {(userPatternPages[index] || 0) + 1} of {pattern.bars || 4}
+                        </span>
+                        <button
+                          className="play-button"
+                          onClick={() => setUserPatternPages(prev => ({
+                            ...prev,
+                            [index]: Math.min((pattern.bars || 4) - 1, (prev[index] || 0) + 1)
+                          }))}
+                          disabled={(userPatternPages[index] || 0) >= (pattern.bars || 4) - 1}
+                          style={{ opacity: (userPatternPages[index] || 0) >= (pattern.bars || 4) - 1 ? 0.5 : 1 }}
+                        >
+                          Next ▶
+                        </button>
+                      </div>
+                    )}
                     <PatternGrid
                       pattern={pattern}
                       isEditor={false}
                       isPlaying={playingPattern === pattern}
                       currentStep={currentStep}
+                      bars={pattern.bars || 4}
+                      page={userPatternPages[index] || 0}
                     />
                   </div>
                 ))}
